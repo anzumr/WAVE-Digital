@@ -117,30 +117,23 @@ const CONFIG = {
      Hero background (wave-bg.js) — mounted per the hero contract
      ------------------------------------------------------------------ */
   var hero = document.getElementById("home");
-  var brandLogo = document.querySelector(".brand-logo");
-  var breakTimer = 0;
-  var heroBroken = false; // the headline sheen plays once per visit, even if the background is re-mounted
+  var rootEl = document.documentElement;
 
-  // Visitor's pause choice (WCAG 2.2.2): stops the hero water and every looping CSS animation.
+  // Visitor's pause choice (WCAG 2.2.2): stops the looping hero water.
   var MOTION_KEY = "waveDigital.motion";
   var motionPaused = false;
   try { motionPaused = window.localStorage.getItem(MOTION_KEY) === "paused"; } catch (err) { /* storage unavailable */ }
 
-  function onBreak() {
-    var first = !heroBroken;
-    heroBroken = true;
-    if (!first || motionPaused || reducedMotion() || !hero) return;
-    hero.classList.remove("is-breaking");
-    if (brandLogo) brandLogo.classList.remove("pulse");
-    void hero.offsetWidth; // restart the CSS animations
-    hero.classList.add("is-breaking");
-    if (brandLogo) brandLogo.classList.add("pulse");
-    clearTimeout(breakTimer);
-    breakTimer = setTimeout(function () {
-      hero.classList.remove("is-breaking");
-      if (brandLogo) brandLogo.classList.remove("pulse");
-    }, 2000);
+  // The plan tickets in the first screen wait for the intro wave to break before they slide onto
+  // their rail (see "Plan tickets arrive" below); this flag is set by onBreak, a first scroll or a timer.
+  var heroSettled = false;
+  var onHeroSettled = null;
+  function settleHero() {
+    if (heroSettled) return;
+    heroSettled = true;
+    if (onHeroSettled) onHeroSettled();
   }
+  function onBreak() { settleHero(); }
 
   var bg = null;
   function mountBackground(replay) {
@@ -224,39 +217,18 @@ const CONFIG = {
   }
 
   if (header) {
-    var onScroll = function () { header.classList.toggle("scrolled", window.scrollY > 8); };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
+    // read once per frame at most, and the class is only written when it actually changes
+    var headerScrolled = null, headerFrame = 0;
+    var syncHeader = function () {
+      headerFrame = 0;
+      var scrolled = window.scrollY > 8;
+      if (scrolled !== headerScrolled) { headerScrolled = scrolled; header.classList.toggle("scrolled", scrolled); }
+    };
+    window.addEventListener("scroll", function () {
+      if (!headerFrame) headerFrame = window.requestAnimationFrame(syncHeader);
+    }, { passive: true });
+    syncHeader();
   }
-
-  // while the page scrolls, decorative CSS loops that can't run on the compositor hold still
-  var rootEl = document.documentElement, scrollIdle = 0;
-  window.addEventListener("scroll", function () {
-    if (scrollIdle) clearTimeout(scrollIdle); else rootEl.classList.add("is-scrolling");
-    scrollIdle = setTimeout(function () { scrollIdle = 0; rootEl.classList.remove("is-scrolling"); }, 180);
-  }, { passive: true });
-
-  /* ------------------------------------------------------------------
-     Logo ripple follows the pointer
-     ------------------------------------------------------------------ */
-  document.querySelectorAll(".brand-logo,.footer-logo").forEach(function (logo) {
-    var last = 0;
-    logo.addEventListener("pointermove", function (e) {
-      var rect = logo.getBoundingClientRect();
-      logo.style.setProperty("--ripple-x", (e.clientX - rect.left) + "px");
-      logo.style.setProperty("--ripple-y", (e.clientY - rect.top) + "px");
-      if (reducedMotion() || motionPaused) return;
-      var now = Date.now();
-      if (now - last < 650) return;
-      last = now;
-      logo.classList.remove("rippling");
-      void logo.offsetWidth;
-      logo.classList.add("rippling");
-    });
-    logo.addEventListener("animationend", function (e) {
-      if (e.animationName === "ripple") logo.classList.remove("rippling");
-    });
-  });
 
   /* ------------------------------------------------------------------
      Toast (non-blocking, announced politely to screen readers)
@@ -417,21 +389,45 @@ const CONFIG = {
     logo: "Logo / Rebranding"
   };
 
+  // Choosing a plan stamps its ticket "fired" with the time (a short, decorative CSS moment):
+  // checkout still opens straight from the click, and the contact route waits for the stamp to land.
+  var FIRE_MS = 420;
+  var fireTimer = 0;
+  function two(n) { return (n < 10 ? "0" : "") + n; }
+  function fireTicket(button) {
+    var ticket = button.closest ? button.closest(".ticket") : null;
+    if (!ticket) return;
+    var stampTime = ticket.querySelector(".stamp time");
+    if (stampTime) {
+      var now = new Date();
+      stampTime.textContent = two(now.getHours()) + ":" + two(now.getMinutes());
+      stampTime.setAttribute("datetime", now.toISOString());
+    }
+    ticket.classList.remove("is-fired");
+    void ticket.offsetWidth; // replay the stamp on a second choice
+    ticket.classList.add("is-fired");
+  }
+
   var paymentLinks = CONFIG.payments || {};
   document.querySelectorAll(".pay").forEach(function (button) {
     button.addEventListener("click", function (e) {
       var key = button.getAttribute("data-payment");
       var link = Object.prototype.hasOwnProperty.call(paymentLinks, key) ? paymentLinks[key] : "";
+      fireTicket(button);
       if (isBlank(link)) {
         if (serviceSelect && PAYMENT_SERVICE[key]) serviceSelect.value = PAYMENT_SERVICE[key];
-        // go to the contact section, its content (heading / form) starting just below the notice
-        var contactStart = contact ? contact.querySelector(".contact-grid") || contact : null;
-        showToast("Online checkout is being set up. Please contact us to arrange payment for this service.", "info", {
-          trigger: button,
-          onShow: contactStart ? function (box) { scrollJustBelow(contactStart, box); } : null
-        });
-        // move keyboard / screen-reader focus along with the page (the heading, so no on-screen keyboard pops up)
-        if (contactTitle) { try { contactTitle.focus({ preventScroll: true }); } catch (err) { contactTitle.focus(); } }
+        var toContact = function () {
+          // go to the contact section, its content (heading / form) starting just below the notice
+          var contactStart = contact ? contact.querySelector(".contact-layout") || contact : null;
+          showToast("Online checkout is being set up. Please contact us to arrange payment for this service.", "info", {
+            trigger: button,
+            onShow: contactStart ? function (box) { scrollJustBelow(contactStart, box); } : null
+          });
+          // move keyboard / screen-reader focus along with the page (the heading, so no on-screen keyboard pops up)
+          if (contactTitle) { try { contactTitle.focus({ preventScroll: true }); } catch (err) { contactTitle.focus(); } }
+        };
+        clearTimeout(fireTimer);
+        if (reducedMotion()) toContact(); else fireTimer = setTimeout(toContact, FIRE_MS);
         return;
       }
       var checkout = stripeUrl(link, CHECKOUT_HOSTS);
@@ -463,30 +459,42 @@ const CONFIG = {
   /* ------------------------------------------------------------------
      Booking (Google Calendar appointment schedule / Calendly)
      ------------------------------------------------------------------ */
-  var booking = document.getElementById("scheduleLink");
+  // #scheduleLink (contact section / thank-you page) plus any other [data-booking] link, such as
+  // the hero's "Book a Free Consultation" (which points at #contact when JavaScript is off)
+  var mainBooking = document.getElementById("scheduleLink");
+  var bookingLinks = Array.prototype.slice.call(document.querySelectorAll("[data-booking]"));
+  if (mainBooking && bookingLinks.indexOf(mainBooking) < 0) bookingLinks.unshift(mainBooking);
   var form = document.getElementById("contactForm");
-  if (booking) {
-    var bookingUnset = isBlank(CONFIG.bookingUrl);
-    var bookingHref = bookingUnset ? null : safeHttpsUrl(String(CONFIG.bookingUrl).trim());
+  var CONTACT_STACK = 1100; // keep in sync with the one-column contact layout (max-width:1099px) in styles.css
+  var bookingUnset = isBlank(CONFIG.bookingUrl);
+  var bookingHref = bookingUnset ? null : safeHttpsUrl(String(CONFIG.bookingUrl).trim());
+  // the contact form is "below" on the home page; the thank-you page has none, so point there
+  var formHint = form ? "below" : "using the contact form on our home page";
+  bookingLinks.forEach(function (booking) {
     if (bookingHref) {
       // real link for middle-click / "open in new tab"
       booking.href = bookingHref;
       booking.target = "_blank";
       booking.rel = "noopener noreferrer";
     }
-    // the contact form is "below" on the home page; the thank-you page has none, so point there
-    var formHint = form ? "below" : "using the contact form on our home page";
     booking.addEventListener("click", function (e) {
       // Ctrl/Cmd/Shift-click on a real link: let the browser open it natively (new / background tab)
       if (bookingHref && (e.ctrlKey || e.metaKey || e.shiftKey)) return;
       e.preventDefault();
       if (bookingUnset) {
-        // one-column layout (form under this button): bring the form up, keeping this button in
-        // view just below the notice instead of half under it
-        var bringFormUp = form && window.innerWidth <= NAV_BREAKPOINT;
+        var onShow = null;
+        if (form && booking !== mainBooking) {
+          // a booking link elsewhere on the page: go to the contact section, just below the notice
+          var contactStart = contact ? contact.querySelector(".contact-layout") || contact : null;
+          if (contactStart) onShow = function (box) { scrollJustBelow(contactStart, box); };
+        } else if (form && window.innerWidth < CONTACT_STACK) {
+          // one-column layout (form under this button): bring the form up, keeping this button in
+          // view just below the notice instead of half under it
+          onShow = function (box) { scrollJustBelow(booking, box); };
+        }
         showToast("Online scheduling is being set up. Please send us a message " + formHint + ".", "info", {
           trigger: booking,
-          onShow: bringFormUp ? function (box) { scrollJustBelow(booking, box); } : null
+          onShow: onShow
         });
         return;
       }
@@ -496,7 +504,7 @@ const CONFIG = {
       }
       openExternal(bookingHref);
     });
-  }
+  });
 
   /* ------------------------------------------------------------------
      Contact form (Formspree)
@@ -590,69 +598,40 @@ const CONFIG = {
   }
 
   /* ------------------------------------------------------------------
-     Scroll reveal — content stays visible if this never runs
+     Plan tickets arrive: each rail's tickets slide into place once, when the
+     rail comes into view; the rail in the first screen waits for the intro wave
+     to break. The waiting state (tickets bunched at the far end of the rail,
+     still visible) is set in <head> before the first paint, and dropped there
+     if this script never runs. Reduced motion: no waiting state, no slide.
      ------------------------------------------------------------------ */
-  if (!reducedMotion() && document.querySelectorAll) {
-    var pending = [];
-    var revealFrame = 0;
-    var reveal = function (el) {
-      el.classList.add("is-visible");
-      // hand the element back to its own hover/transition styles afterwards
-      setTimeout(function () {
-        el.classList.remove("reveal", "is-visible");
-        el.style.removeProperty("--rd");
-      }, 1100);
-    };
-    // Reveal everything whose top has reached the lower part of the viewport, including
-    // anything scrolled past quickly (e.g. a jump to #contact), so nothing stays hidden.
-    var checkReveals = function () {
-      revealFrame = 0;
-      var limit = (window.innerHeight || document.documentElement.clientHeight) * 0.9;
-      pending = pending.filter(function (el) {
-        if (el.getBoundingClientRect().top < limit) { if (revealIO) revealIO.unobserve(el); reveal(el); return false; }
-        return true;
-      });
-      if (!pending.length) {
-        window.removeEventListener("scroll", queueReveal);
-        window.removeEventListener("resize", queueReveal);
-      }
-    };
-    var queueReveal = function () { if (!revealFrame) revealFrame = requestAnimationFrame(checkReveals); };
-    // primary trigger: IntersectionObserver; the scroll check above is the safety net
-    var revealIO = "IntersectionObserver" in window ? new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        revealIO.unobserve(entry.target);
-        var i = pending.indexOf(entry.target);
-        if (i > -1) { pending.splice(i, 1); reveal(entry.target); }
-      });
-    }, { rootMargin: "0px 0px -10% 0px", threshold: 0 }) : null;
-
-    var viewH = window.innerHeight || document.documentElement.clientHeight;
-    document.querySelectorAll("[data-reveal]").forEach(function (el) {
-      // anything already on screen stays as-is (no flash)
-      if (el.getBoundingClientRect().top < viewH * 0.9) return;
-      var siblings = el.parentElement ? Array.prototype.filter.call(el.parentElement.children, function (c) { return c.hasAttribute("data-reveal"); }) : [];
-      var index = siblings.indexOf(el);
-      el.style.setProperty("--rd", (Math.max(0, index) % 4) * 0.08 + "s");
-      el.classList.add("reveal");
-      pending.push(el);
-      if (revealIO) revealIO.observe(el);
-    });
-    if (pending.length) {
-      window.addEventListener("scroll", queueReveal, { passive: true });
-      window.addEventListener("resize", queueReveal, { passive: true });
+  var railGroups = Array.prototype.slice.call(document.querySelectorAll(".rail-group"));
+  rootEl.classList.add("rail-live");
+  var arrive = function (group) {
+    if (group.classList.contains("is-arrived")) return;
+    group.classList.add("is-arriving", "is-arrived");
+    setTimeout(function () { group.classList.remove("is-arriving"); }, 1900);
+  };
+  if (rootEl.classList.contains("rail-armed") && railGroups.length) {
+    if (!("IntersectionObserver" in window)) {
+      railGroups.forEach(arrive);
+    } else {
+      var waiting = [];
+      var railsLeft = railGroups.length;
+      var railIO = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          railIO.unobserve(entry.target);
+          if (--railsLeft <= 0) railIO.disconnect(); // every rail has been seen: stop observing
+          if (heroSettled) arrive(entry.target); else waiting.push(entry.target);
+        });
+      }, { rootMargin: "0px 0px -6% 0px", threshold: 0 });
+      railGroups.forEach(function (group) { railIO.observe(group); });
+      onHeroSettled = function () { waiting.splice(0).forEach(arrive); };
+      // nothing to wait for without a hero renderer; a first scroll or a short wait also settles it
+      if (!bg) settleHero();
+      window.addEventListener("scroll", settleHero, { passive: true, once: true });
+      setTimeout(settleHero, 2600);
     }
-  }
-
-  /* ------------------------------------------------------------------
-     Ambient animations (wave dividers, featured glow) only run on screen
-     ------------------------------------------------------------------ */
-  if ("IntersectionObserver" in window) {
-    var ambientIO = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) { entry.target.classList.toggle("in-view", entry.isIntersecting); });
-    }, { rootMargin: "80px 0px" });
-    document.querySelectorAll(".wave-divider,.price-card.featured").forEach(function (el) { ambientIO.observe(el); });
   }
 
   /* ------------------------------------------------------------------

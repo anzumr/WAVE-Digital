@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>WAVE Digital — Make Waves Online</title>
 <meta name="description" content="WAVE Digital builds websites, advertising and social media for growing businesses.">
-<meta name="theme-color" content="#030d19">
+<meta name="theme-color" content="#04111f">
 <link rel="canonical" href="https://wavedigital.biz/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://wavedigital.biz/">
@@ -44,11 +44,27 @@
 </script>
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap"></noscript>
 <link rel="preload" as="image" type="image/webp" imagesrcset="wave-logo-420.webp 420w, wave-logo.webp 752w" imagesizes="(max-width:760px) 210px, (max-width:1050px) 300px, 450px">
+<script>
+  /* Plan tickets start bunched at the end of their rail and slide into place once (script.js).
+     Set before the first paint so nothing jumps; undone if script.js never runs.
+     Kept above the stylesheet link: an inline script after it would wait for styles.css to download. */
+  (function (root) {
+    // font preloads only when served over http(s): from file:// a CORS-mode preload is refused
+    if (/^https?:$/.test(location.protocol)) {
+      ["fonts/schibsted-grotesk-latin.woff2", "fonts/sofia-sans-extra-condensed-latin.woff2"].forEach(function (href) {
+        var link = document.createElement("link");
+        link.rel = "preload"; link.as = "font"; link.type = "font/woff2"; link.href = href; link.crossOrigin = "anonymous";
+        document.head.appendChild(link);
+      });
+    }
+    try {
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      root.classList.add("rail-armed");
+      setTimeout(function () { if (!root.classList.contains("rail-live")) root.classList.remove("rail-armed"); }, 5000);
+    } catch (err) { /* no arrival: tickets simply hang in place */ }
+  })(document.documentElement);
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -57,15 +73,15 @@
 <header class="header">
   <div class="wrap nav">
     <a class="brand" href="#home" aria-label="WAVE Digital home">
-      <span class="brand-logo"><img src="wave-logo-sm.png" alt="" width="160" height="142"></span>
+      <picture><source type="image/webp" srcset="wave-logo-sm.webp"><img class="brand-mark" src="wave-logo-sm.png" alt="" width="160" height="142"></picture>
       <span class="brand-text"><strong>WAVE DIGITAL</strong><small>WEB · ADS · VISIBILITY · ENGAGEMENT</small></span>
     </a>
     <button class="menu-toggle" id="menuToggle" type="button" aria-controls="mobileMenu" aria-expanded="false" aria-label="Open navigation"><span></span><span></span><span></span></button>
     <nav id="mobileMenu" class="links" aria-label="Main navigation">
-      <a href="#about">About</a>
-      <a href="#portfolio">Portfolio</a>
-      <a href="#services">Services</a>
       <a href="#rates">Rates</a>
+      <a href="#portfolio">Portfolio</a>
+      <a href="#about">About</a>
+      <a href="#services">Services</a>
       <a href="#contact">Contact</a>
       <a class="nav-cta" href="#rates">Get Started</a>
     </nav>
@@ -78,213 +94,257 @@
     <canvas class="wave-canvas" aria-hidden="true"></canvas>
     <div class="hero-art" aria-hidden="true"><picture><source type="image/webp" srcset="wave-logo-420.webp 420w, wave-logo.webp 752w" sizes="(max-width:760px) 210px, (max-width:1050px) 300px, 450px"><img src="wave-logo.png" alt="" width="752" height="668" draggable="false"></picture></div>
     <div class="wrap hero-inner">
-      <p class="eyebrow">YOUR NEXT WAVE OF GROWTH STARTS HERE</p>
-      <h1 id="hero-title">Make your business<br><em>impossible to ignore.</em></h1>
-      <p>Powerful websites. Smarter advertising. Stronger social presence. Digital experiences that turn attention into customers.</p>
-      <div class="actions">
-        <a class="btn primary" href="#rates">Explore Packages <span aria-hidden="true">↗</span></a>
-        <a class="btn ghost" href="#portfolio">See Our Work <span aria-hidden="true">→</span></a>
+      <h1 id="hero-title">Make your business <span class="h1-turn">impossible to ignore.</span></h1>
+      <p class="hero-line">Powerful websites. Smarter advertising. Stronger social presence. Digital experiences that turn attention into customers.</p>
+      <div class="hero-actions">
+        <a class="btn btn-fire" href="#rates">Explore Packages <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M6 13l6 6 6-6"/></svg></a>
+        <a class="btn btn-line" href="#contact" data-booking><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>Book a Free Consultation</a>
       </div>
     </div>
-    <div class="scroll-cue">SCROLL TO EXPLORE ↓</div>
     <button class="motion-toggle" id="motionToggle" type="button" hidden><svg class="motion-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path class="i-pause" d="M8.5 6v12M15.5 6v12"/><path class="i-play" d="M8 5.5v13l11-6.5z"/></svg><span class="motion-label">Pause animation</span></button>
   </section>
 
-  <section id="about" class="section" aria-labelledby="about-title">
-    <div class="wrap about">
-      <div class="about-copy" data-reveal>
-        <p class="eyebrow">WHO WE ARE</p>
-        <h2 id="about-title">Built for businesses<br>ready to <em>make waves.</em></h2>
-        <p class="lead mission">At WAVE Digital, our mission is to help small businesses grow by creating powerful online experiences and driving real customer results through websites, ads, and social media.</p>
-      </div>
-      <div class="four">
-        <article class="card pillar" data-reveal><b class="pillar-letter">W</b><h3>Web</h3><p>Modern sites that convert.</p></article>
-        <article class="card pillar" data-reveal><b class="pillar-letter">A</b><h3>Ads</h3><p>Reach the right customers.</p></article>
-        <article class="card pillar" data-reveal><b class="pillar-letter">V</b><h3>Visibility</h3><p>Get noticed and remembered.</p></article>
-        <article class="card pillar" data-reveal><b class="pillar-letter">E</b><h3>Engagement</h3><p>Build a loyal audience.</p></article>
-      </div>
-    </div>
-  </section>
-
-  <section id="portfolio" class="section shade" aria-labelledby="portfolio-title">
-    <div class="wave-divider" aria-hidden="true"></div>
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <p class="eyebrow">SELECTED WORK</p>
-        <h2 id="portfolio-title">Brands we've helped <em>stand out.</em></h2>
-      </div>
-      <div class="portfolio-grid">
-        <a class="project" href="https://www.ensonosato.com/" target="_blank" rel="noopener noreferrer" data-reveal>
-          <div class="project-visual enso" aria-hidden="true">
-            <svg class="pv-decor enso-ring" viewBox="0 0 200 200" focusable="false"><path d="M150 46c-30-24-84-20-108 18-22 35-8 84 32 99 42 16 88-6 97-48 4-20-1-39-12-52"/></svg>
-            <span class="browser-bar"><span class="dots"><i>●</i> <i>●</i> <i>●</i></span> <span class="url">ensonosato.com</span></span>
-            <div class="preview-content"><span>JAPANESE DINING</span><strong>ENSŌ<br>NO SATO</strong><small>Explore live website ↗</small></div>
-          </div>
-          <div class="project-info">
-            <div><h3>Ensō no Sato</h3><p>Elevated Japanese dining · Restaurant website</p></div>
-            <span class="project-arrow" aria-hidden="true">↗</span>
-            <span class="sr-only">(opens in a new tab)</span>
-          </div>
-        </a>
-        <a class="project" href="https://www.no1halalkitchen.com/" target="_blank" rel="noopener noreferrer" data-reveal>
-          <div class="project-visual halal" aria-hidden="true">
-            <svg class="pv-decor halal-steam" viewBox="0 0 200 200" focusable="false"><path d="M70 150c-14-20 14-30 0-52s12-32 2-50"/><path d="M100 156c-14-22 16-32 0-56s14-34 2-56"/><path d="M130 150c-14-20 14-30 0-52s12-32 2-50"/></svg>
-            <span class="browser-bar"><span class="dots"><i>●</i> <i>●</i> <i>●</i></span> <span class="url">no1halalkitchen.com</span></span>
-            <div class="preview-content"><span>HALAL FUSION CUISINE</span><strong>NO. 1<br>HALAL KITCHEN</strong><small>Explore live website ↗</small></div>
-          </div>
-          <div class="project-info">
-            <div><h3>No.1 Halal Kitchen</h3><p>Halal American-Chinese fusion · Restaurant website</p></div>
-            <span class="project-arrow" aria-hidden="true">↗</span>
-            <span class="sr-only">(opens in a new tab)</span>
-          </div>
-        </a>
-        <a class="project project-cta" href="#contact" data-reveal>
-          <picture class="cta-mark" aria-hidden="true"><source type="image/webp" srcset="wave-logo-420.webp 420w, wave-logo.webp 752w" sizes="(max-width:760px) 220px, 300px"><img src="wave-logo.png" alt="" width="752" height="668" loading="lazy" decoding="async" draggable="false"></picture>
-          <div class="cta-body">
-            <p class="eyebrow">YOUR BRAND HERE</p>
-            <h3>Your business could be next</h3>
-            <p class="cta-line">Tell us what you're building and let's start your project.</p>
-          </div>
-          <span class="cta-go" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
-        </a>
-      </div>
-      <p class="fine">Portfolio previews are stylized illustrations, not screenshots of the live websites.</p>
-    </div>
-  </section>
-
-  <section id="services" class="section" aria-labelledby="services-title">
-    <div class="wave-divider" aria-hidden="true"></div>
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <p class="eyebrow">WHAT WE DO</p>
-        <h2 id="services-title">Everything your business needs<br>to <em>grow online.</em></h2>
-      </div>
-      <div class="service-grid">
-        <article class="card service" data-reveal>
-          <div class="service-top"><span class="service-num">01 /</span><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M3 9h18M9.5 13l-2 2 2 2M14.5 13l2 2-2 2"/></svg></span></div>
-          <h3>Website Creation</h3>
-          <p>Custom, mobile-friendly sites designed to build trust and turn visitors into leads.</p>
-        </article>
-        <article class="card service" data-reveal>
-          <div class="service-top"><span class="service-num">02 /</span><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.3 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg></span></div>
-          <h3>Social Media</h3>
-          <p>Profile creation, branding and ongoing support to keep your business visible.</p>
-        </article>
-        <article class="card service" data-reveal>
-          <div class="service-top"><span class="service-num">03 /</span><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M3.5 10.5v3a1 1 0 0 0 1 1h2.5l6 4.5v-14l-6 4.5H4.5a1 1 0 0 0-1 1z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg></span></div>
-          <h3>Advertising</h3>
-          <p>Targeted campaigns, ongoing optimization and clear performance tracking.</p>
-        </article>
-        <article class="card service" data-reveal>
-          <div class="service-top"><span class="service-num">04 /</span><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><path d="M12 3l2.1 5.4L19.5 10.5l-5.4 2.1L12 18l-2.1-5.4L4.5 10.5l5.4-2.1z"/><path d="M18.5 16.5l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></span></div>
-          <h3>Logo &amp; Rebranding</h3>
-          <p>Distinctive visual identities that capture your business personality.</p>
-        </article>
-        <article class="card service" data-reveal>
-          <div class="service-top"><span class="service-num">05 /</span><span class="service-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2.2 4.8-4.8 2.2 2.2-4.8z"/></svg></span></div>
-          <h3>Business Advice</h3>
-          <p>Practical digital strategy tailored to your goals and budget. Request a custom quote.</p>
-        </article>
-      </div>
-    </div>
-  </section>
-
-  <section id="rates" class="section shade" aria-labelledby="rates-title">
-    <div class="wave-divider" aria-hidden="true"></div>
-    <div class="wrap">
-      <div class="section-head" data-reveal>
-        <p class="eyebrow">TRANSPARENT PRICING</p>
-        <h2 id="rates-title">Plans that move<br><em>with your business.</em></h2>
+  <section id="rates" class="rates" aria-labelledby="rates-title">
+    <div class="wrap rates-layout">
+      <div class="rates-intro">
+        <h2 id="rates-title">Plans that move with your business.</h2>
         <p class="lead">Choose monthly support, pay annually, or launch with a one-time service.</p>
       </div>
 
-      <div class="price-heading" data-reveal><h3>Monthly subscriptions</h3><span>RECURRING</span></div>
-      <div class="price-grid">
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-web-mo">Website Creation</h4>
-          <div class="price">$100–$150<small>/mo</small></div>
-          <p class="price-note">+$100 one-time signup fee</p>
-          <ul><li>Custom website</li><li>Hosting &amp; maintenance</li><li>Ongoing updates</li></ul>
-          <button class="btn primary pay" type="button" data-payment="websiteMonthly" aria-describedby="plan-web-mo">Subscribe <span aria-hidden="true">↗</span></button>
-        </article>
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-social-mo">Social Media Maintenance</h4>
-          <div class="price">$100<small>/mo</small></div>
-          <p class="price-note">+$350 one-time creation/setup</p>
-          <ul><li>Profile maintenance</li><li>Brand consistency</li><li>Ongoing support</li></ul>
-          <button class="btn primary pay" type="button" data-payment="socialMonthly" aria-describedby="plan-social-mo">Subscribe <span aria-hidden="true">↗</span></button>
-        </article>
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-ads-mo">Advertising</h4>
-          <div class="price">$150<small>/mo</small></div>
-          <p class="price-note">Ad spend is separate</p>
-          <ul><li>Campaign management</li><li>Audience targeting</li><li>Performance monitoring</li></ul>
-          <button class="btn primary pay" type="button" data-payment="adsMonthly" aria-describedby="plan-ads-mo">Subscribe <span aria-hidden="true">↗</span></button>
-        </article>
-        <article class="card price-card featured" data-reveal>
-          <div class="popular">BEST VALUE</div>
-          <h4 id="plan-bundle-mo">Full WAVE Package</h4>
-          <div class="price">$350<small>/mo</small></div>
-          <p class="price-note">Website + social media + advertising</p>
-          <ul><li>Website support</li><li>Social media maintenance</li><li>Advertising management</li></ul>
-          <button class="btn primary pay" type="button" data-payment="bundleMonthly" aria-describedby="plan-bundle-mo">Get Full WAVE <span aria-hidden="true">↗</span></button>
-        </article>
-      </div>
+      <div class="rails">
+        <section class="rail-group" aria-labelledby="rail-monthly">
+          <div class="plate"><h3 id="rail-monthly">Monthly subscriptions</h3><span>RECURRING</span></div>
+          <ul class="tickets" role="list">
+            <li class="slot">
+              <article class="ticket" aria-labelledby="plan-web-mo">
+                <p class="ticket-head" aria-hidden="true"><span>No. 01</span><span>Monthly</span></p>
+                <h4 id="plan-web-mo">Website Creation</h4>
+                <p class="price">$100–$150<small>/mo</small></p>
+                <p class="note">+$100 one-time signup fee</p>
+                <ul class="items"><li>Custom website</li><li>Hosting &amp; maintenance</li><li>Ongoing updates</li></ul>
+                <div class="stub"><button class="pay" type="button" data-payment="websiteMonthly" aria-describedby="plan-web-mo">Subscribe <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+            <li class="slot">
+              <article class="ticket" aria-labelledby="plan-social-mo">
+                <p class="ticket-head" aria-hidden="true"><span>No. 02</span><span>Monthly</span></p>
+                <h4 id="plan-social-mo">Social Media Maintenance</h4>
+                <p class="price">$100<small>/mo</small></p>
+                <p class="note">+$350 one-time creation/setup</p>
+                <ul class="items"><li>Profile maintenance</li><li>Brand consistency</li><li>Ongoing support</li></ul>
+                <div class="stub"><button class="pay" type="button" data-payment="socialMonthly" aria-describedby="plan-social-mo">Subscribe <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+            <li class="slot">
+              <article class="ticket" aria-labelledby="plan-ads-mo">
+                <p class="ticket-head" aria-hidden="true"><span>No. 03</span><span>Monthly</span></p>
+                <h4 id="plan-ads-mo">Advertising</h4>
+                <p class="price">$150<small>/mo</small></p>
+                <p class="note">Ad spend is separate</p>
+                <ul class="items"><li>Campaign management</li><li>Audience targeting</li><li>Performance monitoring</li></ul>
+                <div class="stub"><button class="pay" type="button" data-payment="adsMonthly" aria-describedby="plan-ads-mo">Subscribe <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+            <li class="slot">
+              <article class="ticket is-featured" aria-labelledby="plan-bundle-mo">
+                <p class="ticket-head" aria-hidden="true"><span>No. 04</span><span>Monthly</span></p>
+                <p class="flag">BEST VALUE</p>
+                <h4 id="plan-bundle-mo">Full WAVE Package</h4>
+                <p class="price">$350<small>/mo</small></p>
+                <p class="note">Website + social media + advertising</p>
+                <ul class="items"><li>Website support</li><li>Social media maintenance</li><li>Advertising management</li></ul>
+                <div class="stub"><button class="pay" type="button" data-payment="bundleMonthly" aria-describedby="plan-bundle-mo">Get Full WAVE <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+          </ul>
+        </section>
 
-      <div class="price-heading" data-reveal><h3>Yearly subscriptions</h3><span>ANNUAL BILLING</span></div>
-      <div class="price-grid yearly">
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-web-yr">Website Creation</h4>
-          <div class="price">$1,000<small>/yr</small></div>
-          <p class="price-note">Annual website service</p>
-          <ul><li>Custom website</li><li>Hosting and maintenance</li><li>Ongoing updates</li></ul>
-          <button class="btn primary pay" type="button" data-payment="websiteYearly" aria-describedby="plan-web-yr">Choose Annual <span aria-hidden="true">↗</span></button>
-        </article>
-        <article class="card price-card featured" data-reveal>
-          <div class="popular">SAVE $1,200/YEAR VS MONTHLY</div>
-          <h4 id="plan-bundle-yr">Full WAVE Package</h4>
-          <div class="price">$3,000<small>/yr</small></div>
-          <p class="price-note">Website + social + advertising</p>
-          <ul><li>Complete website support</li><li>Social media maintenance</li><li>Advertising management</li></ul>
-          <button class="btn primary pay" type="button" data-payment="bundleYearly" aria-describedby="plan-bundle-yr">Choose Annual <span aria-hidden="true">↗</span></button>
-        </article>
-      </div>
+        <section class="rail-group" aria-labelledby="rail-yearly">
+          <div class="plate"><h3 id="rail-yearly">Yearly subscriptions</h3><span>ANNUAL BILLING</span></div>
+          <ul class="tickets" role="list">
+            <li class="slot">
+              <article class="ticket" aria-labelledby="plan-web-yr">
+                <p class="ticket-head" aria-hidden="true"><span>No. 05</span><span>Yearly</span></p>
+                <h4 id="plan-web-yr">Website Creation</h4>
+                <p class="price">$1,000<small>/yr</small></p>
+                <p class="note">Annual website service</p>
+                <ul class="items"><li>Custom website</li><li>Hosting and maintenance</li><li>Ongoing updates</li></ul>
+                <div class="stub"><button class="pay" type="button" data-payment="websiteYearly" aria-describedby="plan-web-yr">Choose Annual <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+            <li class="slot">
+              <article class="ticket is-featured" aria-labelledby="plan-bundle-yr">
+                <p class="ticket-head" aria-hidden="true"><span>No. 06</span><span>Yearly</span></p>
+                <p class="flag">SAVE $1,200/YEAR VS MONTHLY</p>
+                <h4 id="plan-bundle-yr">Full WAVE Package</h4>
+                <p class="price">$3,000<small>/yr</small></p>
+                <p class="note">Website + social + advertising</p>
+                <ul class="items"><li>Complete website support</li><li>Social media maintenance</li><li>Advertising management</li></ul>
+                <div class="stub"><button class="pay" type="button" data-payment="bundleYearly" aria-describedby="plan-bundle-yr">Choose Annual <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+          </ul>
+        </section>
 
-      <div class="price-heading" data-reveal><h3>One-time services</h3><span>ONE PAYMENT</span></div>
-      <div class="price-grid onetime">
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-signup">Website Signup</h4>
-          <div class="price">$100</div>
-          <p class="price-note">Onboarding and setup fee</p>
-          <button class="btn ghost pay" type="button" data-payment="websiteSignup" aria-describedby="plan-signup">Pay Signup Fee <span aria-hidden="true">↗</span></button>
-        </article>
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-social-setup">Social Media Creation</h4>
-          <div class="price">$350</div>
-          <p class="price-note">Profile setup and initial branding</p>
-          <button class="btn ghost pay" type="button" data-payment="socialSetup" aria-describedby="plan-social-setup">Pay Setup Fee <span aria-hidden="true">↗</span></button>
-        </article>
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-logo">Logo / Rebranding</h4>
-          <div class="price">$250</div>
-          <p class="price-note">Custom logo or brand refresh</p>
-          <button class="btn ghost pay" type="button" data-payment="logo" aria-describedby="plan-logo">Purchase <span aria-hidden="true">↗</span></button>
-        </article>
+        <section class="rail-group" aria-labelledby="rail-onetime">
+          <div class="plate"><h3 id="rail-onetime">One-time services</h3><span>ONE PAYMENT</span></div>
+          <ul class="tickets tickets-short" role="list">
+            <li class="slot">
+              <article class="ticket" aria-labelledby="plan-signup">
+                <p class="ticket-head" aria-hidden="true"><span>No. 07</span><span>One-time</span></p>
+                <h4 id="plan-signup">Website Signup</h4>
+                <p class="price">$100</p>
+                <p class="note">Onboarding and setup fee</p>
+                <div class="stub"><button class="pay" type="button" data-payment="websiteSignup" aria-describedby="plan-signup">Pay Signup Fee <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+            <li class="slot">
+              <article class="ticket" aria-labelledby="plan-social-setup">
+                <p class="ticket-head" aria-hidden="true"><span>No. 08</span><span>One-time</span></p>
+                <h4 id="plan-social-setup">Social Media Creation</h4>
+                <p class="price">$350</p>
+                <p class="note">Profile setup and initial branding</p>
+                <div class="stub"><button class="pay" type="button" data-payment="socialSetup" aria-describedby="plan-social-setup">Pay Setup Fee <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+            <li class="slot">
+              <article class="ticket" aria-labelledby="plan-logo">
+                <p class="ticket-head" aria-hidden="true"><span>No. 09</span><span>One-time</span></p>
+                <h4 id="plan-logo">Logo / Rebranding</h4>
+                <p class="price">$250</p>
+                <p class="note">Custom logo or brand refresh</p>
+                <div class="stub"><button class="pay" type="button" data-payment="logo" aria-describedby="plan-logo">Purchase <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></button></div>
+                <span class="stamp" aria-hidden="true">Fired<time></time></span>
+              </article>
+            </li>
+          </ul>
+        </section>
+
+        <p class="fine">Prices are in USD. Monthly website price depends on scope. Confirm deliverables and any setup fees before purchase. Advertising media budgets are billed separately. Payments are processed securely by Stripe.</p>
       </div>
-      <p class="fine">Prices are in USD. Monthly website price depends on scope. Confirm deliverables and any setup fees before purchase. Advertising media budgets are billed separately. Payments are processed securely by Stripe.</p>
     </div>
   </section>
 
-  <section id="contact" class="section" aria-labelledby="contact-title">
-    <div class="wave-divider" aria-hidden="true"></div>
-    <div class="wrap contact-grid">
-      <div class="contact-copy" data-reveal>
-        <p class="eyebrow">LET'S TALK</p>
-        <h2 id="contact-title" tabindex="-1">Ready to catch<br><em>the next wave?</em></h2>
-        <p class="lead">Tell us what you're building. We'll help you choose the right plan.</p>
-        <a id="scheduleLink" class="btn schedule" href="#contact"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9.5 15l2 2 3.5-3.5"/></svg><span class="btn-text">Schedule a Free Consultation <span aria-hidden="true">↗</span></span></a>
+  <section id="portfolio" class="served" aria-labelledby="portfolio-title">
+    <div class="wrap">
+      <h2 id="portfolio-title">Brands we've helped stand out.</h2>
+      <div class="served-grid">
+        <div class="pass">
+          <div class="pass-spot">
+            <a class="docket" href="https://www.ensonosato.com/" target="_blank" rel="noopener noreferrer">
+              <div class="preview enso">
+                <h3 class="preview-name">Ensō no Sato</h3>
+                <p class="preview-cuisine">Elevated Japanese dining · Restaurant website</p>
+                <p class="preview-url">ensonosato.com</p>
+              </div>
+              <div class="docket-body">
+                <span class="docket-go">Explore live website <span class="go-chip"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></span></span>
+                <span class="sr-only">(opens in a new tab)</span>
+              </div>
+            </a>
+          </div>
+          <div class="pass-spot">
+            <a class="docket" href="https://www.no1halalkitchen.com/" target="_blank" rel="noopener noreferrer">
+              <div class="preview halal">
+                <h3 class="preview-name">No.1 Halal Kitchen</h3>
+                <p class="preview-cuisine">Halal American-Chinese fusion · Restaurant website</p>
+                <p class="preview-url">no1halalkitchen.com</p>
+              </div>
+              <div class="docket-body">
+                <span class="docket-go">Explore live website <span class="go-chip"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></span></span>
+                <span class="sr-only">(opens in a new tab)</span>
+              </div>
+            </a>
+          </div>
+        </div>
+        <a class="docket docket-blank" href="#contact">
+          <div class="blank-body">
+            <h3>Your business could be next</h3>
+            <p>Tell us what you're building and let's start your project.</p>
+          </div>
+          <span class="blank-foot">
+            <span class="blank-no" aria-hidden="true">No. 10<small>your order</small></span>
+            <span class="go-chip"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></span>
+          </span>
+        </a>
       </div>
-      <form id="contactForm" class="contact-form" action="https://formspree.io/f/xpqkaybj" method="POST" data-reveal>
+    </div>
+  </section>
+
+  <section id="about" class="about" aria-labelledby="about-title">
+    <div class="wrap about-layout">
+      <div class="about-copy">
+        <h2 id="about-title">Built for businesses ready to make waves.</h2>
+        <p class="mission">At WAVE Digital, our mission is to help small businesses grow by creating powerful online experiences and driving real customer results through websites, ads, and social media.</p>
+      </div>
+      <ul class="acronym" role="list">
+        <li><span class="letter" aria-hidden="true">W</span><h3>Web</h3><p>Modern sites that convert.</p></li>
+        <li><span class="letter" aria-hidden="true">A</span><h3>Ads</h3><p>Reach the right customers.</p></li>
+        <li><span class="letter" aria-hidden="true">V</span><h3>Visibility</h3><p>Get noticed and remembered.</p></li>
+        <li><span class="letter" aria-hidden="true">E</span><h3>Engagement</h3><p>Build a loyal audience.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="services" class="services" aria-labelledby="services-title">
+    <div class="wrap services-layout">
+      <div class="services-intro">
+        <h2 id="services-title">Everything your business needs to grow online.</h2>
+        <p class="lead">Website, social media and advertising, handled together by the person doing the work.</p>
+      </div>
+      <div class="order-hang">
+        <div class="order">
+          <p class="order-cols" aria-hidden="true"><span>Item</span><span>Rate</span></p>
+          <ol class="order-lines" role="list">
+            <li class="line">
+              <div class="line-item"><h3>Website Creation</h3><p>Custom, mobile-friendly sites designed to build trust and turn visitors into leads.</p></div>
+              <p class="line-rate"><span class="line-price">$100–$150<small>/mo</small></span><span class="line-ref">No. 01 · 05</span></p>
+            </li>
+            <li class="line">
+              <div class="line-item"><h3>Social Media</h3><p>Profile creation, branding and ongoing support to keep your business visible.</p></div>
+              <p class="line-rate"><span class="line-price">$100<small>/mo</small></span><span class="line-ref">No. 02 · 08</span></p>
+            </li>
+            <li class="line">
+              <div class="line-item"><h3>Advertising</h3><p>Targeted campaigns, ongoing optimization and clear performance tracking.</p></div>
+              <p class="line-rate"><span class="line-price">$150<small>/mo</small></span><span class="line-ref">No. 03</span></p>
+            </li>
+            <li class="line">
+              <div class="line-item"><h3>Logo &amp; Rebranding</h3><p>Distinctive visual identities that capture your business personality.</p></div>
+              <p class="line-rate"><span class="line-price">$250</span><span class="line-ref">No. 09</span></p>
+            </li>
+            <li class="line">
+              <div class="line-item"><h3>Business Advice</h3><p>Practical digital strategy tailored to your goals and budget.</p></div>
+              <p class="line-rate"><a class="line-quote" href="#contact">Custom quote<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></p>
+            </li>
+          </ol>
+          <div class="line order-total">
+            <div class="line-item"><h3>Full WAVE Package</h3><p>Website + social media + advertising</p></div>
+            <p class="line-rate"><span class="line-price">$350<small>/mo</small></span><span class="line-ref">No. 04 · 06</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="contact" class="contact" aria-labelledby="contact-title">
+    <div class="wrap contact-layout">
+      <div class="contact-copy">
+        <h2 id="contact-title" tabindex="-1">Ready to catch the next wave?</h2>
+        <p class="lead">Tell us what you're building. We'll help you choose the right plan.</p>
+        <div class="reserve">
+          <a id="scheduleLink" class="btn btn-line btn-book" href="#contact"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9.5 15l2 2 3.5-3.5"/></svg><span class="btn-text">Schedule a Free Consultation</span><svg class="i i-end" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg></a>
+          <p class="reserve-note">Booked through Calendly, held on Google Meet.</p>
+        </div>
+      </div>
+      <form id="contactForm" class="pad" action="https://formspree.io/f/xpqkaybj" method="POST">
         <div class="field">
           <label for="name">Your name</label>
           <input id="name" name="name" required placeholder="Your name" autocomplete="name">
@@ -308,7 +368,7 @@
             <option>Business Advice</option>
           </select>
         </div>
-        <div class="field">
+        <div class="field field-wide">
           <label for="details">Tell us about your project</label>
           <textarea id="details" name="details" required rows="5" placeholder="What would you like to accomplish?"></textarea>
         </div>
@@ -316,7 +376,7 @@
         <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" aria-hidden="true" style="display:none">
 
         <div id="formMessage" class="form-message" role="status" aria-live="polite"></div>
-        <button id="submitBtn" class="btn primary submit" type="submit"><span class="btn-label">Send Inquiry</span> <span class="btn-arrow" aria-hidden="true">↗</span></button>
+        <button id="submitBtn" class="btn btn-fire submit" type="submit"><span class="btn-label">Send Inquiry</span> <svg class="i btn-arrow" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       </form>
     </div>
   </section>
@@ -324,28 +384,27 @@
 </main>
 
 <footer class="site-footer">
-  <div class="wave-divider" aria-hidden="true"></div>
   <div class="wrap footer">
-    <a class="brand footer-brand" href="#home" aria-label="WAVE Digital home">
-      <span class="footer-logo"><img src="wave-logo-sm.png" alt="" width="160" height="142" loading="lazy"></span>
+    <a class="brand" href="#home" aria-label="WAVE Digital home">
+      <picture><source type="image/webp" srcset="wave-logo-sm.webp"><img class="brand-mark" src="wave-logo-sm.png" alt="" width="160" height="142" loading="lazy" decoding="async"></picture>
       <span class="brand-text"><strong>WAVE DIGITAL</strong><small>WEB · ADS · VISIBILITY · ENGAGEMENT</small></span>
     </a>
     <nav class="footer-nav" aria-label="Footer navigation">
-      <a href="#about">About</a>
-      <a href="#portfolio">Portfolio</a>
-      <a href="#services">Services</a>
       <a href="#rates">Rates</a>
+      <a href="#portfolio">Portfolio</a>
+      <a href="#about">About</a>
+      <a href="#services">Services</a>
       <a href="#contact">Contact</a>
-      <a class="portal-link" data-portal-link hidden>Manage subscription <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+      <a class="portal-link" data-portal-link hidden>Manage subscription <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg><span class="sr-only"> (opens in a new tab)</span></a>
     </nav>
-    <span class="copyright">© 2026 WAVE Digital. Make waves online.</span>
+    <p class="copyright">© 2026 WAVE Digital. Make waves online.</p>
   </div>
 </footer>
 
 <div class="toast" id="toastBox">
-  <span class="toast-icon" aria-hidden="true"></span>
+  <span class="toast-icon" aria-hidden="true"><svg class="t-info" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><svg class="t-error" viewBox="0 0 24 24" focusable="false"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.2"/></svg></span>
   <p class="toast-msg" id="toast" role="status" aria-live="polite" aria-atomic="true"></p>
-  <button class="toast-close" id="toastClose" type="button" aria-label="Dismiss notification" hidden><span aria-hidden="true">×</span></button>
+  <button class="toast-close" id="toastClose" type="button" aria-label="Dismiss notification" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
 </div>
 
 <script src="wave-bg.js" defer></script><script src="script.js" defer></script>

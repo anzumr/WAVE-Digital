@@ -1,0 +1,650 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-27T05:06:21Z",
+  "title": "Design System: WAVE Digital",
+  "extensions": {
+    "colorMeta": {
+      "cyan": {
+        "role": "primary",
+        "displayName": "Sea-Glass Cyan",
+        "canonical": "#70e5f2",
+        "tonalRamp": [
+          "oklch(15.0% 0.027 205.1)",
+          "oklch(26.4% 0.040 205.1)",
+          "oklch(37.9% 0.073 205.1)",
+          "oklch(49.3% 0.096 205.1)",
+          "oklch(60.7% 0.107 205.1)",
+          "oklch(72.1% 0.094 205.1)",
+          "oklch(83.6% 0.069 205.1)",
+          "oklch(95.0% 0.035 205.1)"
+        ]
+      },
+      "cyan-hi": {
+        "role": "primary",
+        "displayName": "Spray Cyan",
+        "canonical": "#a6f1f8",
+        "tonalRamp": [
+          "oklch(15.0% 0.019 203.3)",
+          "oklch(26.4% 0.028 203.3)",
+          "oklch(37.9% 0.050 203.3)",
+          "oklch(49.3% 0.067 203.3)",
+          "oklch(60.7% 0.074 203.3)",
+          "oklch(72.1% 0.065 203.3)",
+          "oklch(83.6% 0.048 203.3)",
+          "oklch(95.0% 0.025 203.3)"
+        ]
+      },
+      "cyan-ink": {
+        "role": "primary",
+        "displayName": "Stamp Ink Cyan",
+        "canonical": "#0786ad",
+        "tonalRamp": [
+          "oklch(15.0% 0.028 227.5)",
+          "oklch(26.4% 0.042 227.5)",
+          "oklch(37.9% 0.075 227.5)",
+          "oklch(49.3% 0.100 227.5)",
+          "oklch(60.7% 0.111 227.5)",
+          "oklch(72.1% 0.097 227.5)",
+          "oklch(83.6% 0.072 227.5)",
+          "oklch(95.0% 0.037 227.5)"
+        ]
+      },
+      "steel": {
+        "role": "secondary",
+        "displayName": "Acronym Steel",
+        "canonical": "#a6b3bf",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 245.9)",
+          "oklch(26.4% 0.008 245.9)",
+          "oklch(37.9% 0.015 245.9)",
+          "oklch(49.3% 0.020 245.9)",
+          "oklch(60.7% 0.023 245.9)",
+          "oklch(72.1% 0.020 245.9)",
+          "oklch(83.6% 0.015 245.9)",
+          "oklch(95.0% 0.007 245.9)"
+        ]
+      },
+      "steel-face": {
+        "role": "secondary",
+        "displayName": "Pass Steel",
+        "canonical": "#9aa8b5",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 246.1)",
+          "oklch(26.4% 0.009 246.1)",
+          "oklch(37.9% 0.017 246.1)",
+          "oklch(49.3% 0.022 246.1)",
+          "oklch(60.7% 0.025 246.1)",
+          "oklch(72.1% 0.022 246.1)",
+          "oklch(83.6% 0.016 246.1)",
+          "oklch(95.0% 0.008 246.1)"
+        ]
+      },
+      "steel-plate": {
+        "role": "secondary",
+        "displayName": "Tag Steel",
+        "canonical": "#b3bfc9",
+        "tonalRamp": [
+          "oklch(15.0% 0.005 243.0)",
+          "oklch(26.4% 0.007 243.0)",
+          "oklch(37.9% 0.013 243.0)",
+          "oklch(49.3% 0.017 243.0)",
+          "oklch(60.7% 0.019 243.0)",
+          "oklch(72.1% 0.017 243.0)",
+          "oklch(83.6% 0.013 243.0)",
+          "oklch(95.0% 0.006 243.0)"
+        ]
+      },
+      "steel-edge": {
+        "role": "secondary",
+        "displayName": "Slot Shadow Steel",
+        "canonical": "#4f6072",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 250.0)",
+          "oklch(26.4% 0.013 250.0)",
+          "oklch(37.9% 0.024 250.0)",
+          "oklch(49.3% 0.032 250.0)",
+          "oklch(60.7% 0.036 250.0)",
+          "oklch(72.1% 0.031 250.0)",
+          "oklch(83.6% 0.023 250.0)",
+          "oklch(95.0% 0.012 250.0)"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Harbour Navy",
+        "canonical": "#04111f",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 249.7)",
+          "oklch(26.4% 0.013 249.7)",
+          "oklch(37.9% 0.024 249.7)",
+          "oklch(49.3% 0.032 249.7)",
+          "oklch(60.7% 0.035 249.7)",
+          "oklch(72.1% 0.031 249.7)",
+          "oklch(83.6% 0.023 249.7)",
+          "oklch(95.0% 0.012 249.7)"
+        ]
+      },
+      "ground-2": {
+        "role": "neutral",
+        "displayName": "Lower Deck Navy",
+        "canonical": "#071a2d",
+        "tonalRamp": [
+          "oklch(15.0% 0.011 250.5)",
+          "oklch(26.4% 0.017 250.5)",
+          "oklch(37.9% 0.031 250.5)",
+          "oklch(49.3% 0.041 250.5)",
+          "oklch(60.7% 0.045 250.5)",
+          "oklch(72.1% 0.040 250.5)",
+          "oklch(83.6% 0.029 250.5)",
+          "oklch(95.0% 0.015 250.5)"
+        ]
+      },
+      "ground-deep": {
+        "role": "neutral",
+        "displayName": "Night Water",
+        "canonical": "#030d19",
+        "tonalRamp": [
+          "oklch(15.0% 0.008 249.7)",
+          "oklch(26.4% 0.012 249.7)",
+          "oklch(37.9% 0.021 249.7)",
+          "oklch(49.3% 0.028 249.7)",
+          "oklch(60.7% 0.031 249.7)",
+          "oklch(72.1% 0.027 249.7)",
+          "oklch(83.6% 0.020 249.7)",
+          "oklch(95.0% 0.010 249.7)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Foam White",
+        "canonical": "#edf3f7",
+        "tonalRamp": [
+          "oklch(15.0% 0.002 236.6)",
+          "oklch(26.4% 0.003 236.6)",
+          "oklch(37.9% 0.006 236.6)",
+          "oklch(49.3% 0.008 236.6)",
+          "oklch(60.7% 0.008 236.6)",
+          "oklch(72.1% 0.007 236.6)",
+          "oklch(83.6% 0.005 236.6)",
+          "oklch(95.0% 0.003 236.6)"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Mist",
+        "canonical": "#a7b9c8",
+        "tonalRamp": [
+          "oklch(15.0% 0.007 243.2)",
+          "oklch(26.4% 0.011 243.2)",
+          "oklch(37.9% 0.020 243.2)",
+          "oklch(49.3% 0.026 243.2)",
+          "oklch(60.7% 0.029 243.2)",
+          "oklch(72.1% 0.026 243.2)",
+          "oklch(83.6% 0.019 243.2)",
+          "oklch(95.0% 0.010 243.2)"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Haze",
+        "canonical": "#8ea3b4",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 242.6)",
+          "oklch(26.4% 0.013 242.6)",
+          "oklch(37.9% 0.023 242.6)",
+          "oklch(49.3% 0.031 242.6)",
+          "oklch(60.7% 0.034 242.6)",
+          "oklch(72.1% 0.030 242.6)",
+          "oklch(83.6% 0.022 242.6)",
+          "oklch(95.0% 0.011 242.6)"
+        ]
+      },
+      "hair": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "rgba(166,179,191,.2)",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 245.9)",
+          "oklch(26.4% 0.008 245.9)",
+          "oklch(37.9% 0.015 245.9)",
+          "oklch(49.3% 0.020 245.9)",
+          "oklch(60.7% 0.023 245.9)",
+          "oklch(72.1% 0.020 245.9)",
+          "oklch(83.6% 0.015 245.9)",
+          "oklch(95.0% 0.007 245.9)"
+        ]
+      },
+      "hair-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "rgba(166,179,191,.38)",
+        "tonalRamp": [
+          "oklch(15.0% 0.006 245.9)",
+          "oklch(26.4% 0.008 245.9)",
+          "oklch(37.9% 0.015 245.9)",
+          "oklch(49.3% 0.020 245.9)",
+          "oklch(60.7% 0.023 245.9)",
+          "oklch(72.1% 0.020 245.9)",
+          "oklch(83.6% 0.015 245.9)",
+          "oklch(95.0% 0.007 245.9)"
+        ]
+      },
+      "cotton": {
+        "role": "neutral",
+        "displayName": "Cotton",
+        "canonical": "#f5f6f3",
+        "tonalRamp": [
+          "oklch(15.0% 0.001 121.6)",
+          "oklch(26.4% 0.002 121.6)",
+          "oklch(37.9% 0.003 121.6)",
+          "oklch(49.3% 0.004 121.6)",
+          "oklch(60.7% 0.004 121.6)",
+          "oklch(72.1% 0.004 121.6)",
+          "oklch(83.6% 0.003 121.6)",
+          "oklch(95.0% 0.001 121.6)"
+        ]
+      },
+      "cotton-2": {
+        "role": "neutral",
+        "displayName": "Pressed Cotton",
+        "canonical": "#e8ecee",
+        "tonalRamp": [
+          "oklch(15.0% 0.001 228.8)",
+          "oklch(26.4% 0.002 228.8)",
+          "oklch(37.9% 0.003 228.8)",
+          "oklch(49.3% 0.005 228.8)",
+          "oklch(60.7% 0.005 228.8)",
+          "oklch(72.1% 0.004 228.8)",
+          "oklch(83.6% 0.003 228.8)",
+          "oklch(95.0% 0.002 228.8)"
+        ]
+      },
+      "print": {
+        "role": "neutral",
+        "displayName": "Print Navy",
+        "canonical": "#0b2341",
+        "tonalRamp": [
+          "oklch(15.0% 0.016 255.5)",
+          "oklch(26.4% 0.024 255.5)",
+          "oklch(37.9% 0.043 255.5)",
+          "oklch(49.3% 0.058 255.5)",
+          "oklch(60.7% 0.064 255.5)",
+          "oklch(72.1% 0.056 255.5)",
+          "oklch(83.6% 0.041 255.5)",
+          "oklch(95.0% 0.021 255.5)"
+        ]
+      },
+      "print-2": {
+        "role": "neutral",
+        "displayName": "Faded Print",
+        "canonical": "#4a5b6d",
+        "tonalRamp": [
+          "oklch(15.0% 0.009 250.1)",
+          "oklch(26.4% 0.014 250.1)",
+          "oklch(37.9% 0.025 250.1)",
+          "oklch(49.3% 0.033 250.1)",
+          "oklch(60.7% 0.036 250.1)",
+          "oklch(72.1% 0.032 250.1)",
+          "oklch(83.6% 0.023 250.1)",
+          "oklch(95.0% 0.012 250.1)"
+        ]
+      },
+      "print-3": {
+        "role": "neutral",
+        "displayName": "Pencil Print",
+        "canonical": "#5b6b7c",
+        "tonalRamp": [
+          "oklch(15.0% 0.008 250.0)",
+          "oklch(26.4% 0.012 250.0)",
+          "oklch(37.9% 0.023 250.0)",
+          "oklch(49.3% 0.030 250.0)",
+          "oklch(60.7% 0.033 250.0)",
+          "oklch(72.1% 0.029 250.0)",
+          "oklch(83.6% 0.021 250.0)",
+          "oklch(95.0% 0.011 250.0)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Ruled Print",
+        "canonical": "rgba(11,35,65,.38)",
+        "tonalRamp": [
+          "oklch(15.0% 0.016 255.5)",
+          "oklch(26.4% 0.024 255.5)",
+          "oklch(37.9% 0.043 255.5)",
+          "oklch(49.3% 0.058 255.5)",
+          "oklch(60.7% 0.064 255.5)",
+          "oklch(72.1% 0.056 255.5)",
+          "oklch(83.6% 0.041 255.5)",
+          "oklch(95.0% 0.021 255.5)"
+        ]
+      },
+      "err": {
+        "role": "status",
+        "displayName": "Error Red",
+        "canonical": "#b3261e",
+        "tonalRamp": [
+          "oklch(15.0% 0.045 28.7)",
+          "oklch(26.4% 0.067 28.7)",
+          "oklch(37.9% 0.121 28.7)",
+          "oklch(49.3% 0.160 28.7)",
+          "oklch(60.7% 0.178 28.7)",
+          "oklch(72.1% 0.156 28.7)",
+          "oklch(83.6% 0.115 28.7)",
+          "oklch(95.0% 0.059 28.7)"
+        ]
+      },
+      "ok": {
+        "role": "status",
+        "displayName": "Served Green",
+        "canonical": "#136c45",
+        "tonalRamp": [
+          "oklch(15.0% 0.026 158.5)",
+          "oklch(26.4% 0.038 158.5)",
+          "oklch(37.9% 0.069 158.5)",
+          "oklch(49.3% 0.092 158.5)",
+          "oklch(60.7% 0.102 158.5)",
+          "oklch(72.1% 0.090 158.5)",
+          "oklch(83.6% 0.066 158.5)",
+          "oklch(95.0% 0.034 158.5)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The hero headline only, over the wave; carries a soft dark legibility shadow there."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headings, kept to 12-15ch and balanced."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Plan names on tickets; service lines and About items in the same cut at 18-20px."
+      },
+      "lead": {
+        "displayName": "Lead",
+        "purpose": "The one line under a section heading, in Mist, max 34em."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text and input text; 16px on phones."
+      },
+      "button": {
+        "displayName": "Button",
+        "purpose": "Every button and action label."
+      },
+      "fine": {
+        "displayName": "Fine",
+        "purpose": "Price terms and small print, in Haze, max 64ch."
+      },
+      "price": {
+        "displayName": "Price",
+        "purpose": "Ticket and order-line prices in the condensed numeric face; sized to the ticket width with container units."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Ticket heads, order column heads, line references, rail tags and the stamp; uppercase, tracked, tabular."
+      }
+    },
+    "shadows": [
+      {
+        "name": "hung-paper",
+        "value": "0 1px 1px rgba(0,0,0,.3), 0 12px 16px -12px rgba(0,0,0,.75)",
+        "purpose": "Plan tickets and the services order at rest."
+      },
+      {
+        "name": "standing-docket",
+        "value": "0 1px 1px rgba(0,0,0,.3), 0 16px 24px -20px rgba(0,0,0,.9)",
+        "purpose": "Portfolio dockets and the toast (toast: 0 16px 26px -18px)."
+      },
+      {
+        "name": "order-pad",
+        "value": "0 1px 1px rgba(0,0,0,.3), 0 18px 28px -22px rgba(0,0,0,.9)",
+        "purpose": "The inquiry pad."
+      },
+      {
+        "name": "lifted-ticket",
+        "value": "0 22px 22px -16px rgba(0,0,0,.8)",
+        "purpose": "Pre-drawn on a pseudo layer behind a ticket; faded in with opacity on hover or focus, never animated."
+      },
+      {
+        "name": "rail",
+        "value": "0 3px 4px -1px rgba(0,0,0,.5)",
+        "purpose": "Under every rail, the order hang and the pass edge."
+      },
+      {
+        "name": "stamp-ring",
+        "value": "inset 0 0 0 2px var(--cotton), inset 0 0 0 3.5px currentColor",
+        "purpose": "The Fired stamp's double border."
+      },
+      {
+        "name": "pay-edge",
+        "value": "inset 0 -2px 0 rgba(11,35,65,.16)",
+        "purpose": "The faint pressed bottom edge of the ticket pay button."
+      },
+      {
+        "name": "hero-legibility",
+        "value": "text-shadow: 0 2px 22px rgba(2,11,21,.4)",
+        "purpose": "Hero headline only, for legibility over moving water; not a system device."
+      }
+    ],
+    "motion": [
+      {
+        "name": "expo",
+        "value": "cubic-bezier(.16,1,.3,1)",
+        "purpose": "Arrivals, lifts, the stamp throw, the nav underline, the menu drop."
+      },
+      {
+        "name": "quick",
+        "value": "cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Color and border state changes, the toast fade, the skip link."
+      },
+      {
+        "name": "state",
+        "value": ".18s quick",
+        "purpose": "Hover color and border changes on buttons, links and chips."
+      },
+      {
+        "name": "lift",
+        "value": ".5s expo (ticket), .45s expo (docket)",
+        "purpose": "Ticket drops 6px and turns -1.2deg; docket rises 5px."
+      },
+      {
+        "name": "lift-shadow",
+        "value": "opacity .35s quick",
+        "purpose": "Fades the pre-drawn lifted shadow."
+      },
+      {
+        "name": "rail-arrival",
+        "value": "transform 1.05s expo, delay col x 90ms",
+        "purpose": "Tickets slide in from the right end of their rail once."
+      },
+      {
+        "name": "stamp",
+        "value": ".42s expo: scale 1.7 to 1, rotate -14deg to -7deg",
+        "purpose": "The Fired stamp lands on a used ticket."
+      },
+      {
+        "name": "hero-in",
+        "value": ".9s expo, 14px rise, staggered .1s/.22s/.34s",
+        "purpose": "Hero copy arrival on load."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "rates-two-column",
+        "value": "1100px"
+      },
+      {
+        "name": "compact-nav",
+        "value": "1050px"
+      },
+      {
+        "name": "menu",
+        "value": "900px"
+      },
+      {
+        "name": "tickets-two-up",
+        "value": "859px"
+      },
+      {
+        "name": "phone",
+        "value": "760px"
+      },
+      {
+        "name": "narrow-two-up",
+        "value": "480px"
+      },
+      {
+        "name": "small-phone",
+        "value": "420px"
+      },
+      {
+        "name": "tickets-one-up",
+        "value": "369px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Fire Button",
+      "kind": "button",
+      "refersTo": "button-fire",
+      "description": "Primary action on the navy ground: Explore Packages, Get Started, Send Inquiry.",
+      "html": "<div class=\"ds-ground\"><a class=\"ds-btn ds-btn-fire\" href=\"#\">Explore Packages <svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 5v14M6 13l6 6 6-6\"/></svg></a></div>",
+      "css": ".ds-ground{background:#04111f;padding:24px} .ds-btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 22px;border:1.5px solid transparent;border-radius:2px;font:600 16px/1.2 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif);letter-spacing:-.005em;text-decoration:none;transition:background-color .18s cubic-bezier(.2,.8,.2,1),color .18s cubic-bezier(.2,.8,.2,1),border-color .18s cubic-bezier(.2,.8,.2,1)} .ds-btn-fire{background:#70e5f2;color:#04111f} .ds-btn-fire:hover{background:#a6f1f8} .ds-btn:focus-visible{outline:2px solid #70e5f2;outline-offset:3px} .ds-btn:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Line Button",
+      "kind": "button",
+      "refersTo": "button-line",
+      "description": "Secondary action on navy: Book a Free Consultation.",
+      "html": "<div class=\"ds-ground\"><a class=\"ds-btn ds-btn-line\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"1.5\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/></svg>Book a Free Consultation</a></div>",
+      "css": ".ds-ground{background:#04111f;padding:24px} .ds-btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 22px;border:1.5px solid transparent;border-radius:2px;font:600 16px/1.2 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif);letter-spacing:-.005em;text-decoration:none;transition:background-color .18s cubic-bezier(.2,.8,.2,1),border-color .18s cubic-bezier(.2,.8,.2,1)} .ds-btn-line{border-color:rgba(112,229,242,.75);color:#edf3f7;background:rgba(4,17,31,.42)} .ds-btn-line svg{color:#70e5f2} .ds-btn-line:hover{background:rgba(112,229,242,.14);border-color:#70e5f2} .ds-btn:focus-visible{outline:2px solid #70e5f2;outline-offset:3px} .ds-btn:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Ink Button",
+      "kind": "button",
+      "refersTo": "button-ink",
+      "description": "Secondary action printed on cotton (thank-you ticket).",
+      "html": "<div class=\"ds-cotton\"><a class=\"ds-btn ds-btn-ink\" href=\"#\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"5\" width=\"17\" height=\"15.5\" rx=\"1.5\"/><path d=\"M3.5 10h17M8 3v4M16 3v4\"/></svg>Schedule a Free Consultation</a></div>",
+      "css": ".ds-cotton{background:#f5f6f3;padding:24px} .ds-btn{display:inline-flex;align-items:center;gap:10px;min-height:52px;padding:0 22px;border:1.5px solid transparent;border-radius:2px;font:600 16px/1.2 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif);letter-spacing:-.005em;text-decoration:none;transition:background-color .18s cubic-bezier(.2,.8,.2,1),color .18s cubic-bezier(.2,.8,.2,1)} .ds-btn-ink{border-color:#0b2341;color:#0b2341;background:transparent} .ds-btn-ink:hover{background:#0b2341;color:#f5f6f3} .ds-btn-ink:hover svg{color:#70e5f2} .ds-btn:focus-visible{outline:2px solid #0b2341;outline-offset:3px} .ds-btn:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Plan Ticket",
+      "kind": "card",
+      "refersTo": "ticket",
+      "description": "Signature: an itemised, priced order ticket hung from the steel rail, with a tear-off stub and pay button; lifts on hover or focus.",
+      "html": "<div class=\"ds-rail-stage\"><div class=\"ds-rail\"></div><div class=\"ds-slot\"><article class=\"ds-ticket\"><p class=\"ds-ticket-head\"><span>No. 01</span><span>Monthly</span></p><h4 class=\"ds-ticket-name\">Website Creation</h4><p class=\"ds-price\">$100&ndash;$150<small>/mo</small></p><p class=\"ds-note\">+$100 one-time signup fee</p><ul class=\"ds-items\"><li>Custom website</li><li>Hosting &amp; maintenance</li><li>Ongoing updates</li></ul><div class=\"ds-stub\"><button class=\"ds-pay\" type=\"button\">Subscribe <svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 17L17 7M9 7h8v8\"/></svg></button></div></article></div></div>",
+      "css": ".ds-rail-stage{position:relative;background:#04111f;padding:0 24px 40px;overflow:hidden} .ds-rail{position:absolute;z-index:2;left:0;right:0;top:0;height:18px;background:linear-gradient(0deg,#4f6072 0 1px,transparent 1px),repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px),#9aa8b5;box-shadow:0 3px 4px -1px rgba(0,0,0,.5)} .ds-slot{position:relative;width:260px;padding-top:18px} .ds-ticket{position:relative;z-index:1;margin-top:-10px;padding:10px 18px 0;background:#f5f6f3;color:#0b2341;border-radius:0 0 1px 1px;box-shadow:0 1px 1px rgba(0,0,0,.3),0 12px 16px -12px rgba(0,0,0,.75);transform-origin:50% 0;transition:transform .5s cubic-bezier(.16,1,.3,1)} .ds-ticket::before{content:'';position:absolute;left:0;right:0;top:calc(100% - 1px);height:6px;background:linear-gradient(-45deg,transparent 4px,#f5f6f3 4.5px) 0 0/8px 6px repeat-x,linear-gradient(45deg,transparent 4px,#f5f6f3 4.5px) 0 0/8px 6px repeat-x} .ds-ticket::after{content:'';position:absolute;inset:16px 10px -6px;z-index:-1;box-shadow:0 22px 22px -16px rgba(0,0,0,.8);opacity:0;transition:opacity .35s cubic-bezier(.2,.8,.2,1);pointer-events:none} .ds-slot:hover .ds-ticket,.ds-ticket:focus-within{transform:translateY(6px) rotate(-1.2deg)} .ds-slot:hover .ds-ticket::after,.ds-ticket:focus-within::after{opacity:1} .ds-ticket-head{display:flex;justify-content:space-between;margin:0;padding:12px 0 9px;border-bottom:3px double rgba(11,35,65,.38);font:600 15px/1 var(--font-num, 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif);letter-spacing:.09em;text-transform:uppercase;font-variant-numeric:tabular-nums} .ds-ticket-head span:last-child{color:#4a5b6d} .ds-ticket-name{margin:16px 0 0;font:700 18px/1.22 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif);letter-spacing:-.012em} .ds-price{margin:12px 0 0;font:700 44px/.92 var(--font-num, 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif);letter-spacing:-.005em;font-variant-numeric:tabular-nums lining-nums;white-space:nowrap} .ds-price small{margin-left:3px;font:600 .46em/1 var(--font-num, 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif);color:#4a5b6d} .ds-note{margin:9px 0 0;font:600 14px/1.4 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif);color:#4a5b6d} .ds-items{display:grid;gap:7px;margin:14px 0 20px;padding:13px 0 0;border-top:1.5px dotted rgba(11,35,65,.38);list-style:none;font:400 14.5px/20px var(--font-text, 'Schibsted Grotesk', Arial, sans-serif)} .ds-items li{position:relative;padding-left:17px} .ds-items li::before{content:'';position:absolute;left:0;top:9px;width:9px;height:2px;background:#0b2341} .ds-stub{position:relative;margin:0 -18px;padding:18px} .ds-stub::before{content:'';position:absolute;left:12px;right:12px;top:-1.5px;height:3px;background:radial-gradient(circle,#04111f 1.3px,transparent 1.8px) 0 50%/8px 3px repeat-x} .ds-stub::after{content:'';position:absolute;top:-7px;left:-7px;right:-7px;height:14px;background:radial-gradient(circle at 7px 7px,#04111f 6.5px,transparent 7px) left/14px 14px no-repeat,radial-gradient(circle at 7px 7px,#04111f 6.5px,transparent 7px) right/14px 14px no-repeat} .ds-pay{display:flex;width:100%;align-items:center;justify-content:space-between;min-height:48px;padding:0 14px 0 16px;border:0;border-radius:2px;background:#70e5f2;color:#0b2341;box-shadow:inset 0 -2px 0 rgba(11,35,65,.16);font:700 15.5px/1.15 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif);cursor:pointer;transition:background-color .18s cubic-bezier(.2,.8,.2,1),color .18s cubic-bezier(.2,.8,.2,1)} .ds-pay:hover{background:#0b2341;color:#70e5f2} .ds-pay:focus-visible{outline:2px solid #0b2341;outline-offset:3px} .ds-pay:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Rail Plate",
+      "kind": "custom",
+      "refersTo": "rail-plate",
+      "description": "The stamped steel tag clipped over the left end of a rail, naming the plan group.",
+      "html": "<div class=\"ds-plate-stage\"><div class=\"ds-plate-rail\"></div><div class=\"ds-plate\"><h3>Monthly subscriptions</h3></div></div>",
+      "css": ".ds-plate-stage{position:relative;background:#04111f;height:64px;padding:0 24px} .ds-plate-rail{position:absolute;left:0;right:0;top:23px;height:18px;background:linear-gradient(0deg,#4f6072 0 1px,transparent 1px),repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px),#9aa8b5;box-shadow:0 3px 4px -1px rgba(0,0,0,.5)} .ds-plate{position:absolute;left:24px;top:32px;transform:translateY(-50%);padding:8px 14px 7px;background:#b3bfc9;border:1px solid #4f6072;border-radius:1px;color:#0b2341} .ds-plate h3{margin:0;font:700 17px/1 var(--font-num, 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif);letter-spacing:.07em;text-transform:uppercase;white-space:nowrap}"
+    },
+    {
+      "name": "Fired Stamp",
+      "kind": "custom",
+      "refersTo": "stamp",
+      "description": "The fire mark thrown onto a ticket once its action is used; Stamp Ink Cyan with a double ring.",
+      "html": "<div class=\"ds-cotton\"><span class=\"ds-stamp\">Fired<time>19:42</time></span></div>",
+      "css": ".ds-cotton{background:#f5f6f3;padding:28px} .ds-stamp{display:inline-flex;align-items:baseline;gap:8px;padding:6px 10px 5px 12px;border:2.5px solid currentColor;border-radius:3px;box-shadow:inset 0 0 0 2px #f5f6f3,inset 0 0 0 3.5px currentColor;background:rgba(245,246,243,.94);color:#0786ad;font:800 23px/1 var(--font-num, 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif);letter-spacing:.14em;text-transform:uppercase;transform:rotate(-7deg);animation:ds-stamp .42s cubic-bezier(.16,1,.3,1) both} .ds-stamp time{font:700 14px/1 var(--font-num, 'Sofia Sans Extra Condensed', 'Arial Narrow', sans-serif);letter-spacing:.1em;font-variant-numeric:tabular-nums} @keyframes ds-stamp{0%{opacity:0;transform:rotate(-14deg) scale(1.7)}45%{opacity:1}100%{opacity:1;transform:rotate(-7deg) scale(1)}} @media (prefers-reduced-motion:reduce){.ds-stamp{animation:none}}"
+    },
+    {
+      "name": "Order Pad Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Text field on the cotton order pad under its steel binding.",
+      "html": "<div class=\"ds-pad\"><label class=\"ds-label\" for=\"ds-name\">Your name</label><input class=\"ds-input\" id=\"ds-name\" placeholder=\"Your name\"></div>",
+      "css": ".ds-pad{position:relative;display:grid;gap:8px;padding:40px 24px 24px;background:#f5f6f3;color:#0b2341;border-radius:2px;box-shadow:0 1px 1px rgba(0,0,0,.3),0 18px 28px -22px rgba(0,0,0,.9)} .ds-pad::before{content:'';position:absolute;left:0;right:0;top:0;height:16px;border-radius:2px 2px 0 0;background:linear-gradient(0deg,#4f6072 0 1px,transparent 1px),repeating-linear-gradient(0deg,rgba(255,255,255,.028) 0 1px,transparent 1px 3px),#9aa8b5} .ds-label{font:600 15px/1.3 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif)} .ds-input{width:100%;box-sizing:border-box;min-height:50px;padding:12px 14px;background:#fff;color:#0b2341;border:1.5px solid #6c7d8d;border-radius:2px;font:400 16px/1.45 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif);transition:border-color .15s cubic-bezier(.2,.8,.2,1)} .ds-input::placeholder{color:#5b6b7c;opacity:1} .ds-input:hover{border-color:#4a5b6d} .ds-input:focus{border-color:#0b2341;outline:2px solid #0b2341;outline-offset:2px}"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Sticky navy header links with the cyan current-section underline and the Get Started fill.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"true\">Rates</a><a href=\"#\">Portfolio</a><a href=\"#\">About</a><a href=\"#\">Services</a><a class=\"ds-nav-cta\" href=\"#\">Get Started</a></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;gap:28px;padding:0 24px;min-height:72px;background:#04111f;border-bottom:1px solid rgba(166,179,191,.2);font:500 15px/1 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif)} .ds-nav a{position:relative;display:inline-flex;align-items:center;min-height:44px;color:#a7b9c8;text-decoration:none;transition:color .18s cubic-bezier(.2,.8,.2,1)} .ds-nav a:not(.ds-nav-cta)::after{content:'';position:absolute;left:0;right:0;bottom:8px;height:2px;background:#70e5f2;transform:scaleX(0);transform-origin:left;transition:transform .35s cubic-bezier(.16,1,.3,1)} .ds-nav a:hover,.ds-nav a[aria-current=true]{color:#edf3f7} .ds-nav a[aria-current=true]::after{transform:scaleX(1)} .ds-nav a:focus-visible{outline:2px solid #70e5f2;outline-offset:3px} .ds-nav .ds-nav-cta{min-height:40px;padding:0 18px;background:#70e5f2;color:#04111f;font-weight:600;border-radius:2px;transition:background-color .18s cubic-bezier(.2,.8,.2,1)} .ds-nav .ds-nav-cta:hover{background:#a6f1f8;color:#04111f}"
+    },
+    {
+      "name": "Go Chip",
+      "kind": "chip",
+      "refersTo": "go-chip",
+      "description": "The 44px cyan arrow square on a served docket's stub; inverts to navy on hover.",
+      "html": "<div class=\"ds-cotton\"><a class=\"ds-go\" href=\"#\">Explore live website <span class=\"ds-go-chip\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M7 17L17 7M9 7h8v8\"/></svg></span></a></div>",
+      "css": ".ds-cotton{background:#f5f6f3;padding:20px 24px} .ds-go{display:flex;align-items:center;justify-content:space-between;gap:16px;color:#0b2341;text-decoration:none;font:600 15.5px/1.2 var(--font-text, 'Schibsted Grotesk', Arial, sans-serif)} .ds-go-chip{display:grid;place-items:center;width:44px;height:44px;background:#70e5f2;color:#0b2341;border-radius:2px;transition:background-color .18s cubic-bezier(.2,.8,.2,1),color .18s cubic-bezier(.2,.8,.2,1)} .ds-go:hover .ds-go-chip{background:#0b2341;color:#70e5f2} .ds-go:focus-visible{outline:2px solid #0b2341;outline-offset:5px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Kitchen Pass",
+    "overview": "WAVE's whole offer is made to order. The site is a fine-dining kitchen pass at night: a deep harbour-navy ground that continues out of the pinned wave hero, a matte blue-grey steel rail running edge to edge, and heavyweight white cotton tickets hung from it, each one itemised, numbered, priced and ready to fire. Diner materials are translated up to fine dining: thermal paper becomes cotton card, the red kitchen stamp becomes the brand cyan.\n\nThe system is calm and exact rather than loud. Density is low on the navy and high on the cards: wide bands of dark ground with one headline and one supporting line, then tightly printed tickets with double rules, dotted item rules, tabular figures and perforated stubs. Everything that can be bought or asked for is physical: it hangs, tears, lifts off the rail and gets stamped. Motion is one orchestrated arrival per rail, transform and opacity only, never a loop that costs scrolling.\n\nConfirmed rejections, from the chosen world: the category-default agency landing (glowing gradients, a headline over two buttons on a gradient, rows of same-size icon cards, a \"most popular\" pricing table), glass and blur, gradient text, eyebrow labels, chrome gloss on metal.",
+    "keyCharacteristics": [
+      "Two material families only: harbour-navy ground with pale ink, and cotton card with navy print.",
+      "One cyan accent, reserved for actions, focus, the active nav underline and the fired stamp.",
+      "Steel rails and the pass edge run past both screen edges; cards hang from them.",
+      "A precise text grotesk for words, an extra-condensed numeric face for prices, ticket numbers and tags.",
+      "Near-square paper corners (1–2px), perforations, tear edges and double rules as the ornament.",
+      "Shadows are contact shadows under hung paper; lifting fades in a pre-drawn shadow, never animates one."
+    ],
+    "rules": [
+      {
+        "name": "The Fire-Only Cyan Rule",
+        "body": "Cyan marks what acts: action fills, focus, the current-section underline and the stamp. It is never a heading color, a section band or decoration.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Stocks Rule",
+        "body": "Every surface is either navy ground with ink colors or cotton card with print colors. Print never sits on navy and ink never sits on cotton; selection and focus colors swap with the stock (cyan on navy, print navy on cotton).",
+        "section": "colors"
+      },
+      {
+        "name": "The Printed Numbers Rule",
+        "body": "Every price, ticket number, rail tag and fire mark sets in Sofia Sans Extra Condensed with tabular lining figures. Headings, plan names and running text never do.",
+        "section": "typography"
+      },
+      {
+        "name": "The Standalone Heading Rule",
+        "body": "A section heading stands alone with at most one lead line under it. Nothing small and uppercase is stacked above it.",
+        "section": "typography"
+      },
+      {
+        "name": "The Hung, Not Floating Rule",
+        "body": "Anything orderable (plans, the services order, the inquiry pad, served client dockets) is attached to steel: a rail, a binding or the pass edge. Cards do not float free on the ground.",
+        "section": "layout"
+      },
+      {
+        "name": "The Opacity-Only Shadow Rule",
+        "body": "A state that deepens a shadow fades in a pre-drawn shadow layer; box-shadow and filter are never animated.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Paper Corner Rule",
+        "body": "No radius above 3px and no pills. Character comes from tears, perforations and rules, not from rounding.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do hang every priced or orderable thing on Cotton from steel: a rail, the pad binding or the pass edge.",
+      "Do print prices, ticket numbers, rail tags and stamps in Sofia Sans Extra Condensed with tabular lining figures.",
+      "Do keep cyan for actions, focus and the stamp; on Cotton, hover inverts an action to Print Navy with cyan text.",
+      "Do animate only transform and opacity, on the expo ease (cubic-bezier(.16,1,.3,1)) for arrivals and lifts and the quick ease (cubic-bezier(.2,.8,.2,1)) for color states.",
+      "Do give every motion a reduced-motion state: tickets hang in place, lifts are removed, the stamp lands without the throw.",
+      "Do give every control at least a 44px hit area."
+    ],
+    "donts": [
+      "Don't add glows, glass, backdrop blur or gradient text; the hero's water backdrop is the only light effect.",
+      "Don't stack small uppercase labels above section headings.",
+      "Don't round corners past 3px or make pill buttons.",
+      "Don't animate box-shadow or filter, or add infinite decorative loops; the hero water is the only loop and it keeps its pause control.",
+      "Don't print navy text on the navy ground or pale ink on Cotton.",
+      "Don't gloss the steel: one flat face, a faint grain, a 1px dark lip.",
+      "Don't lay plans out as rows of same-size icon cards or a highlighted \"most popular\" pricing column."
+    ]
+  }
+}

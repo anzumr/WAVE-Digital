@@ -9,7 +9,9 @@ Upload these files together, in the same folder:
   wave-logo.png         (full-size logo: social-share image, and the hero artwork in older browsers)
   wave-logo.webp        (full-size logo, lighter WebP version used by the hero, the portfolio and the thank-you page)
   wave-logo-420.webp    (smaller WebP logo used on phones and tablets)
-  wave-logo-sm.png      (small logo: header and footer)
+  wave-logo-sm.webp     (small logo: header and footer, light WebP version)
+  wave-logo-sm.png      (the same small logo for older browsers)
+  fonts/                (the site's two typefaces, with their licence OFL.txt)
   favicon.png           (browser tab icon)
   apple-touch-icon.png  (home-screen icon for phones and tablets)
   robots.txt, sitemap.xml (help search engines find the site)
@@ -74,7 +76,7 @@ BEFORE GOING LIVE:
 3. Set up payments with Stripe: follow "TAKING PAYMENTS WITH STRIPE" below.
 4. Confirm the exact scope of the $100-$150 website plan and whether annual plans include setup fees.
 5. Confirm advertising budget is billed separately and whether bundle setup fees apply.
-6. The portfolio shows your two client projects, which link to their live sites (their previews are stylized illustrations, not screenshots; replace them with your own screenshots if desired), plus a "Your business could be next" tile that takes visitors to the contact form. Add new client projects as you complete them.
+6. The portfolio shows your two client projects, which link to their live sites (each shows a flat name plate in the client's colours, not a screenshot; replace it with your own screenshot if desired), plus a "Your business could be next" tile that takes visitors to the contact form. Add new client projects as you complete them.
 7. Test the contact form, checkout, booking and "Manage subscription" links on your live domain before sharing.
 8. Link previews and search: DONE for wavedigital.biz. index.html's canonical, og:url,
    og:image and twitter:image tags, robots.txt and sitemap.xml all use https://wavedigital.biz.

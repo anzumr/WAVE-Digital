@@ -6,14 +6,21 @@
 <title>Payment received — WAVE Digital</title>
 <meta name="description" content="Thank you for your payment to WAVE Digital.">
 <meta name="robots" content="noindex">
-<meta name="theme-color" content="#030d19">
+<meta name="theme-color" content="#04111f">
 <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap"></noscript>
-<link rel="preload" as="image" type="image/webp" imagesrcset="wave-logo-420.webp 420w, wave-logo.webp 752w" imagesizes="(max-width:760px) 180px, 232px">
+<link rel="preload" as="image" type="image/webp" imagesrcset="wave-logo-420.webp 420w, wave-logo.webp 752w" imagesizes="(max-width:760px) 132px, 176px">
+<script>
+  /* font preloads only when served over http(s): from file:// a CORS-mode preload is refused.
+     Kept above the stylesheet link: an inline script after it would wait for styles.css to download. */
+  if (/^https?:$/.test(location.protocol)) {
+    ["fonts/schibsted-grotesk-latin.woff2", "fonts/sofia-sans-extra-condensed-latin.woff2"].forEach(function (href) {
+      var link = document.createElement("link");
+      link.rel = "preload"; link.as = "font"; link.type = "font/woff2"; link.href = href; link.crossOrigin = "anonymous";
+      document.head.appendChild(link);
+    });
+  }
+</script>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body class="thanks-page">
@@ -22,7 +29,7 @@
 <header class="header">
   <div class="wrap nav">
     <a class="brand" href="index.html" aria-label="WAVE Digital home">
-      <span class="brand-logo"><img src="wave-logo-sm.png" alt="" width="160" height="142"></span>
+      <picture><source type="image/webp" srcset="wave-logo-sm.webp"><img class="brand-mark" src="wave-logo-sm.png" alt="" width="160" height="142"></picture>
       <span class="brand-text"><strong>WAVE DIGITAL</strong><small>WEB · ADS · VISIBILITY · ENGAGEMENT</small></span>
     </a>
     <a class="back-link" href="index.html"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5M11 6l-6 6 6 6"/></svg><span>Back<span class="back-extra"> to site</span></span></a>
@@ -34,16 +41,20 @@
   <section class="thanks" aria-labelledby="thanks-title">
     <div class="wrap thanks-inner">
       <div class="thanks-art" aria-hidden="true">
-        <picture><source type="image/webp" srcset="wave-logo-420.webp 420w, wave-logo.webp 752w" sizes="(max-width:760px) 180px, 232px"><img src="wave-logo.png" alt="" width="752" height="668" draggable="false"></picture>
-        <span class="thanks-check"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <picture><source type="image/webp" srcset="wave-logo-420.webp 420w, wave-logo.webp 752w" sizes="(max-width:760px) 132px, 176px"><img src="wave-logo.png" alt="" width="752" height="668" draggable="false"></picture>
       </div>
-      <p class="eyebrow">PAYMENT RECEIVED</p>
-      <h1 id="thanks-title">Thank you — <br><em>you're all set.</em></h1>
-      <p class="thanks-lead">Your payment went through and Stripe will email your receipt. <br class="br-wide">We'll be in touch to get your project started.</p>
-      <div class="actions">
-        <a class="btn primary" href="index.html">Back to WAVE Digital</a>
-        <a id="scheduleLink" class="btn schedule" href="index.html#contact"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9.5 15l2 2 3.5-3.5"/></svg><span class="btn-text">Schedule a Free Consultation <span aria-hidden="true">↗</span></span></a>
-        <a class="btn ghost" data-portal-link hidden>Manage subscription <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+      <div class="thanks-rail">
+        <article class="ticket thanks-ticket">
+          <div class="ticket-head" aria-hidden="true"></div>
+          <h1 id="thanks-title">Thank you — you're all set.</h1>
+          <p class="thanks-lead">Your payment went through and Stripe will email your receipt. We'll be in touch to get your project started.</p>
+          <div class="stub">
+            <a class="btn btn-fire" href="index.html">Back to WAVE Digital</a>
+            <a id="scheduleLink" class="btn btn-ink" href="index.html#contact"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="1.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9.5 15l2 2 3.5-3.5"/></svg><span class="btn-text">Schedule a Free Consultation</span></a>
+            <a class="btn btn-ink" data-portal-link hidden>Manage subscription <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg><span class="sr-only"> (opens in a new tab)</span></a>
+          </div>
+          <span class="stamp" aria-hidden="true">Fired</span>
+        </article>
       </div>
     </div>
   </section>
@@ -51,28 +62,27 @@
 </main>
 
 <footer class="site-footer">
-  <div class="wave-divider" aria-hidden="true"></div>
   <div class="wrap footer">
-    <a class="brand footer-brand" href="index.html" aria-label="WAVE Digital home">
-      <span class="footer-logo"><img src="wave-logo-sm.png" alt="" width="160" height="142" loading="lazy"></span>
+    <a class="brand" href="index.html" aria-label="WAVE Digital home">
+      <picture><source type="image/webp" srcset="wave-logo-sm.webp"><img class="brand-mark" src="wave-logo-sm.png" alt="" width="160" height="142" loading="lazy" decoding="async"></picture>
       <span class="brand-text"><strong>WAVE DIGITAL</strong><small>WEB · ADS · VISIBILITY · ENGAGEMENT</small></span>
     </a>
     <nav class="footer-nav" aria-label="Footer navigation">
-      <a href="index.html#about">About</a>
-      <a href="index.html#portfolio">Portfolio</a>
-      <a href="index.html#services">Services</a>
       <a href="index.html#rates">Rates</a>
+      <a href="index.html#portfolio">Portfolio</a>
+      <a href="index.html#about">About</a>
+      <a href="index.html#services">Services</a>
       <a href="index.html#contact">Contact</a>
-      <a class="portal-link" data-portal-link hidden>Manage subscription <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+      <a class="portal-link" data-portal-link hidden>Manage subscription <svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 17L17 7M9 7h8v8"/></svg><span class="sr-only"> (opens in a new tab)</span></a>
     </nav>
-    <span class="copyright">© 2026 WAVE Digital. Make waves online.</span>
+    <p class="copyright">© 2026 WAVE Digital. Make waves online.</p>
   </div>
 </footer>
 
 <div class="toast" id="toastBox">
-  <span class="toast-icon" aria-hidden="true"></span>
+  <span class="toast-icon" aria-hidden="true"><svg class="t-info" viewBox="0 0 24 24" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.2"/></svg><svg class="t-error" viewBox="0 0 24 24" focusable="false"><path d="M12 3.5l9.5 16.5h-19z"/><path d="M12 10v4.5M12 17.2v.2"/></svg></span>
   <p class="toast-msg" id="toast" role="status" aria-live="polite" aria-atomic="true"></p>
-  <button class="toast-close" id="toastClose" type="button" aria-label="Dismiss notification" hidden><span aria-hidden="true">×</span></button>
+  <button class="toast-close" id="toastClose" type="button" aria-label="Dismiss notification" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
 </div>
 
 <script src="script.js" defer></script>

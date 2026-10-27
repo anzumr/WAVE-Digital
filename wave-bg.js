@@ -20,7 +20,8 @@
  *     interactive: true,     // pointer lantern / wake / sparks, click splash, sky bead
  *     reducedMotion: undefined, // true = still frame, false = force motion, undefined = follow the OS
  *     renderer: 'auto',      // 'auto' | '2d' (force the Canvas 2D renderer)
- *     debug: false           // adds stats() and _debug to the returned object (QA only)
+ *     debug: false           // adds stats() and _debug to the returned object (QA only);
+ *                            //   a debug mount also honours tier: 'full' | 'lite'
  *   });
  *   bg.splash(0.7, 0.65);    // fractions of the hero size
  *   bg.destroy();
@@ -28,6 +29,14 @@
  * Renderer chain: WebGL -> Canvas 2D on a sibling canvas (on GL init/shader
  * failure, a render exception or context loss; back to WebGL when the context
  * is restored) -> static CSS backdrop of the hero (logo shown whole).
+ *
+ * Cost: nothing is drawn while the page scrolls (the last frame slides away with
+ * the hero; the water carries on ~150 ms after the scroll stops), nor while the
+ * hero is off screen or the tab hidden. Tiers: 'full' on a GPU (the smooth sky
+ * shaded at half resolution); 'lite' when WebGL is software-rendered (SwiftShader,
+ * llvmpipe, WARP...) or missing - a small buffer at ~20 fps, simpler shading,
+ * fewer particles. At rest, frames over budget step the cost down within ~1-2 s
+ * (full: the buffer; lite: ~15 fps, then the buffer) and back up when there is room.
  * ---------------------------------------------------------------------------
  */
 (function () {
@@ -152,11 +161,37 @@
     return px;
   }
 
+  // Readability scrim + bottom fade into the next section (amount A of the page colour SCRIM).
+  // Full tier: its own pass over the finished frame, exactly as always, but rasterised only where A > 0
+  // (NO_SCRIM in the passes below it).
+  // Lite: folded into every pass instead. With premultiplied "over" blending, scaling each layer by (1 - A)
+  // and adding SCRIM * A * alpha composes to the same picture, except where additive light saturates.
+  var GLSL_SCRIM = [
+    'const vec3 SCRIM = vec3(0.012, 0.051, 0.098);',
+    '#ifdef NO_SCRIM',
+    'float scrimA(vec2 p){ return 0.0; }',
+    '#else',
+    'uniform vec4 uRect; uniform vec4 uS;',
+    'float scrimA(vec2 p){',
+    '  vec2 c = (uRect.xy + uRect.zw) * 0.5; vec2 hs = (uRect.zw - uRect.xy) * 0.5;',
+    '  vec2 q = abs(p - c) - hs + 48.0;',
+    '  float sd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 48.0;',
+    '  float a = uS.x * (1.0 - smoothstep(-70.0, 190.0, sd));',
+    '  float l = uS.y * (1.0 - smoothstep(0.0, uS.w, p.x));',
+    '  float bt = uS.z * smoothstep(uRes.y - 96.0, uRes.y, p.y);',
+    '  return 1.0 - (1.0 - a) * (1.0 - l) * (1.0 - bt);',
+    '}',
+    '#endif'
+  ].join('\n');
+
   var VS_FULL = 'attribute vec2 aP; void main(){ gl_Position = vec4(aP, 0.0, 1.0); }';
+  // the sky (or its blit) is drawn as a strip from the top edge down to just below the highest crest (CSS px)
+  var VS_SKY = 'attribute vec2 aP; uniform vec2 uRes; void main(){ gl_Position = vec4(aP / uRes * vec2(2.0, -2.0) + vec2(-1.0, 1.0), 0.0, 1.0); }';
 
   var FS_SKY = [
     'uniform vec2 uRes; uniform vec2 uView; uniform vec4 uHalo; uniform vec4 uSkyT; uniform vec4 uKeep; uniform float uWisp;',
     GLSL_NOISE,
+    GLSL_SCRIM,
     'void main(){',
     '  vec2 p = vec2(gl_FragCoord.x, uView.y - gl_FragCoord.y) * (uRes / uView);',
     // the site's hero backdrop: radial-gradient(ellipse at 60% 30%, #19506a 0, #06243a 42%, #020b15 82%)
@@ -166,21 +201,55 @@
     '  vec3 c0 = vec3(0.098, 0.314, 0.416); vec3 c1 = vec3(0.024, 0.141, 0.227); vec3 c2 = vec3(0.008, 0.043, 0.082);',
     '  vec3 col = t < 0.42 ? mix(c0, c1, t / 0.42) : mix(c1, c2, clamp((t - 0.42) / 0.40, 0.0, 1.0));',
     // slow sea haze so the sky is never a dead gradient
+    '#ifdef LITE',
+    '  float n = vn(p * 0.0021 + uSkyT.xy);',
+    '#else',
     '  float n = vn(p * 0.0021 + uSkyT.xy) * 0.6 + vn(p * 0.0057 + vec2(uSkyT.z, 0.0)) * 0.4;',
+    '#endif',
     '  col *= 0.95 + 0.10 * n;',
-    // faint moonlit cloud wisps in the upper-right sky, right of the copy
+    // faint moonlit cloud wisps in the upper-right sky, right of the copy (mask first: the noise only where it shows)
+    '#ifndef LITE',
     '  if (uWisp > 0.001) {',
-    '    vec2 q = p * vec2(0.0021, 0.0068) + vec2(uSkyT.w, 0.0);',
-    '    float f = vn(q) * 0.55 + vn(q * 2.03 + vec2(13.1, 7.7)) * 0.3 + vn(q * 4.07 + vec2(3.3, 1.9)) * 0.15;',
     '    float m = smoothstep(uKeep.z + 20.0, uKeep.z + 300.0, p.x) * smoothstep(0.03 * uRes.y, 0.16 * uRes.y, p.y) * (1.0 - smoothstep(0.24 * uRes.y, 0.6 * uRes.y, p.y));',
-    '    col += vec3(0.50, 0.78, 0.88) * smoothstep(0.46, 0.82, f) * m * uWisp;',
+    '    if (m > 0.0) {',
+    '      vec2 q = p * vec2(0.0021, 0.0068) + vec2(uSkyT.w, 0.0);',
+    '      float f = vn(q) * 0.55 + vn(q * 2.03 + vec2(13.1, 7.7)) * 0.3 + vn(q * 4.07 + vec2(3.3, 1.9)) * 0.15;',
+    '      col += vec3(0.50, 0.78, 0.88) * smoothstep(0.46, 0.82, f) * m * uWisp;',
+    '    }',
     '  }',
+    '#endif',
     // soft moonlit halo behind the logo
     '  vec2 hd = (p - uHalo.xy) / uHalo.z; float hr = dot(hd, hd);',
     '  col += vec3(0.06, 0.29, 0.42) * exp(-hr * 1.6) * uHalo.w;',
     '  col += vec3(0.14, 0.44, 0.60) * exp(-hr * 6.0) * uHalo.w * 0.28;',
+    '#ifdef SKY_HALF',
+    // into the half-resolution texture, dithered before it is quantised to 8 bits: the bilinear blit then
+    // averages the dither into the in-between levels, so the dark gradient never bands into plateaus
+    '  gl_FragColor = vec4(col + (h21(gl_FragCoord.xy + vec2(23.0, 41.0)) - 0.5) / 255.0, 1.0);',
+    '#else',
+    '  float A = scrimA(p);',
     '  col += (h21(gl_FragCoord.xy) - 0.5) / 255.0;',
-    '  gl_FragColor = vec4(col, 1.0);',
+    '  gl_FragColor = vec4(col * (1.0 - A) + SCRIM * A, 1.0);',
+    '#endif',
+    '}'
+  ].join('\n');
+
+  // full-resolution blit of the half-resolution sky (bilinear), with the per-pixel dither the sky always had
+  var FS_BLIT = [
+    'uniform vec2 uView; uniform sampler2D uSky;',
+    GLSL_NOISE,
+    'void main(){',
+    '  gl_FragColor = vec4(texture2D(uSky, gl_FragCoord.xy / uView).rgb + (h21(gl_FragCoord.xy) - 0.5) / 255.0, 1.0);',
+    '}'
+  ].join('\n');
+
+  // the scrim over the finished frame (full tier), computed per pixel exactly as it always was
+  var FS_SCRIM = [
+    'uniform vec2 uRes; uniform vec2 uView;',
+    GLSL_SCRIM,
+    'void main(){',
+    '  float A = scrimA(vec2(gl_FragCoord.x, uView.y - gl_FragCoord.y) * (uRes / uView));',
+    '  gl_FragColor = vec4(SCRIM * A, A);',
     '}'
   ].join('\n');
 
@@ -208,6 +277,7 @@
     'uniform vec3 uGap; uniform vec3 uFog; uniform vec3 uAbyss; uniform vec3 uRoyal; uniform vec3 uFoam; uniform vec3 uRim; uniform vec3 uLan;',
     'uniform vec4 uGlit; uniform vec4 uTa; uniform vec4 uTb; uniform vec4 uTc;',
     GLSL_NOISE,
+    GLSL_SCRIM,
     'void main(){',
     '  float d = v0.x; float room = v0.y; float g = v0.z; float u = v0.w;',
     '  float fw = uFw; float depth = v4.a; float seed = depth * 7.3 + 0.5;',
@@ -216,36 +286,57 @@
     '  float line = smoothstep(-g - fw * 0.75, -g + fw * 0.25, d) * (1.0 - body);',
     '  float alpha = v5.w * (1.0 - v3.a * smoothstep(room - fw * 1.5, room, d));',
     '  float dd = max(d, 0.0);',
+    '  vec2 fp = vec2(gl_FragCoord.x, uView.y - gl_FragCoord.y) * (uRes / uView);',
+    // pointer lantern: a soft cyan pool of light in the water and a bright streak along the crest
+    '  float lan = 0.0;',
+    '  if (uPtr.w > 0.001) { vec2 dp = (fp - uPtr.xy) / uPtr.z; lan = exp(-dot(dp, dp)) * uPtr.w; }',
+    '  vec3 col = vec3(0.0);',
+    // above the crest only the rim light and the gap line show: the body shading is skipped there
+    '  if (body > 0.0) {',
     '  float rc = clamp(room, 26.0, 96.0 + 30.0 * depth);',
     '  float v = dd / rc;',
     // band gradient: light crest -> azure-teal -> teal-navy (-> royal deep in the front body) -> abyss
-    '  vec3 col = mix(v2.rgb, v3.rgb, smoothstep(0.0, 0.22, v) * 0.6 + smoothstep(0.0, 10.0, dd) * 0.4);',
+    '  col = mix(v2.rgb, v3.rgb, smoothstep(0.0, 0.22, v) * 0.6 + smoothstep(0.0, 10.0, dd) * 0.4);',
     '  col = mix(col, v4.rgb, smoothstep(0.16, 0.9, v));',
     '  col = mix(col, uRoyal, smoothstep(0.7, 1.6, v) * depth * depth * 0.5);',
     '  col = mix(col, uAbyss, smoothstep(0.75, 2.3, v) * (0.85 + 0.15 * depth));',
     // slow, large-scale light inside the body (never a flat fill)
-    '  float cz = vn(vec2(u * 0.011 + uTa.x, dd * 0.028 + uTa.y + seed));',
+    '  float cz = 0.5;',
+    '#ifndef LITE',
+    '  cz = vn(vec2(u * 0.011 + uTa.x, dd * 0.028 + uTa.y + seed));',
+    '#endif',
     '  col *= 0.9 + 0.2 * cz * smoothstep(14.0, 70.0, dd);',
     // moon column under the logo: a soft light path with fine shimmering glints
     '  float gx = (u - uGlit.x) / uGlit.z;',
     '  float gm = exp(-gx * gx) * smoothstep(0.6, 1.0, depth) * smoothstep(5.0, 20.0, dd) * (1.0 - smoothstep(40.0, 210.0, dd));',
     '  if (gm > 0.004) {',
+    '#ifndef LITE',
     '    float g1 = vnh(vec2(u * 0.075 + uTa.z, dd * 0.42 + uTa.w));',
     '    float g2 = vnh(vec2(u * 0.19 + uTb.x, dd * 0.9 + uTb.y));',
     '    float gl = smoothstep(0.72, 0.93, g1 * 0.7 + g2 * 0.3);',
     '    col += vec3(0.62, 0.9, 1.0) * gl * gm * uGlit.w;',
+    '#endif',
     '    col += vec3(0.16, 0.36, 0.46) * gm * uGlit.w * 0.22;',
     '  }',
     // gloss: segmented specular streak under the crest + broad sheen, gliding with the flow,
     // plus a slow travelling swell of light that runs along every band
     // (the gloss segments only show within ~20px of the crest: skip the noise deeper down)
     '  float seg = 0.0;',
+    '#ifndef LITE',
     '  if (dd < 120.0) { float n1 = vn(vec2(u * 0.0042 - v6.x, seed)); float n2 = vn(vec2(u * 0.0115 - v6.y, seed + 3.7)); seg = smoothstep(0.40, 0.78, n1 * 0.68 + n2 * 0.32); }',
+    '#endif',
     '  float gc = (u - v6.z) / uGlossW;',
     '  float sw = exp(-gc * gc);',
     '  float lit = v1.y;',
-    '  float sc = 3.0 + 2.6 * depth; float sk = (dd - sc) / (1.1 + 0.9 * depth);',
+    '  float sc = 3.0 + 2.6 * depth; float sW = 1.1 + 0.9 * depth;',
+    '#ifdef LITE',
+    // a coarse buffer: thin lights are kept at least ~1 buffer pixel wide (same total light), so they never stair-step
+    '  float sW1 = max(sW, 1.2 * fw); float sk = (dd - sc) / sW1;',
+    '  float spec = exp(-sk * sk) * max(seg, sw * 0.85) * v2.a * (0.3 + 0.85 * lit) * (sW / sW1);',
+    '#else',
+    '  float sk = (dd - sc) / sW;',
     '  float spec = exp(-sk * sk) * max(seg, sw * 0.85) * v2.a * (0.3 + 0.85 * lit);',
+    '#endif',
     '  float sheen = exp(-dd / 15.0) * (0.10 + 0.30 * seg + 0.45 * sw) * (0.4 + 0.6 * lit) * v2.a;',
     '  col += vec3(0.55, 0.88, 1.0) * sheen * 0.42;',
     '  col += vec3(0.30, 0.62, 0.78) * sw * exp(-dd / 60.0) * 0.07;',
@@ -255,34 +346,42 @@
     // light from the logo halo catching nearby crests
     '  col += vec3(0.30, 0.72, 0.95) * v5.x * exp(-dd / 34.0) * 0.30;',
     '  col = mix(col, vec3(0.94, 0.99, 1.0), clamp(spec, 0.0, 1.0) * 0.85);',
-    // pointer lantern: a soft cyan pool of light in the water and a bright streak along the crest
-    '  float lan = 0.0;',
-    '  if (uPtr.w > 0.001) {',
-    '    vec2 fp = vec2(gl_FragCoord.x, uView.y - gl_FragCoord.y) * (uRes / uView);',
-    '    vec2 dp = (fp - uPtr.xy) / uPtr.z;',
-    '    lan = exp(-dot(dp, dp)) * uPtr.w;',
-    '    col += uLan * lan * (0.75 * exp(-dd / 5.0) + 0.22 * exp(-dd / 45.0) + 0.07);',
-    '  }',
+    '  if (uPtr.w > 0.001) col += uLan * lan * (0.75 * exp(-dd / 5.0) + 0.22 * exp(-dd / 45.0) + 0.07);',
     // foam lace on disturbed / breaking crests
     '  float foam = v1.x;',
     '  if (foam > 0.01 && dd < 12.0 + 16.0 * foam) {',
+    '    float fm = 0.0;',
+    '#ifndef LITE',
     '    float fz = 2.5 + 15.0 * foam;',
     '    float fn = vn(vec2(u * 0.17 + uTb.w, dd * 0.36 + uTc.x)) * 0.55 + vn(vec2(u * 0.45 + uTc.y, dd * 0.95 + 11.0)) * 0.45;',
-    '    float fm = smoothstep(0.58 - 0.22 * foam, 0.9 - 0.2 * foam, fn) * (1.0 - smoothstep(fz * 0.2, fz, dd)) * clamp(foam * 1.3, 0.0, 1.0);',
+    '    fm = smoothstep(0.58 - 0.22 * foam, 0.9 - 0.2 * foam, fn) * (1.0 - smoothstep(fz * 0.2, fz, dd)) * clamp(foam * 1.3, 0.0, 1.0);',
+    '#endif',
+    '#ifdef LITE',
+    '    float fW = max(2.2, fw); fm = max(fm, exp(-dd / fW) * clamp(foam, 0.0, 1.0) * 0.7 * (2.2 / fW));',
+    '#else',
     '    fm = max(fm, exp(-dd / 2.2) * clamp(foam, 0.0, 1.0) * 0.7);',
+    '#endif',
     '    col = mix(col, uFoam, clamp(fm, 0.0, 1.0) * (0.25 + 0.6 * depth * depth));',
     '  }',
     '  col = mix(col, uFog, v1.z);',
     '  col *= v1.w;',
+    '  }',
     // luminous rim above the crest (additive light, no coverage), stronger near the lantern
     '  float above = max(-d - g, 0.0);',
     '  float rimW = 1.6 + 2.0 * (1.0 - depth);',
+    '#ifdef LITE',
+    '  float rimW1 = max(rimW, 1.2 * fw);',
+    '  float glow = (v5.y + lan * 1.4) * exp(-above / rimW1) * (rimW / rimW1) * (1.0 - body) * smoothstep(-g - 9.0 - fw, -g - 1.0, d);',
+    '#else',
     '  float glow = (v5.y + lan * 1.4) * exp(-above / rimW) * (1.0 - body) * smoothstep(-g - 9.0, -g - 1.0, d);',
+    '#endif',
     '  vec3 rimCol = mix(uRim, uLan, clamp(lan * 1.5, 0.0, 1.0));',
     '  float A = (body + line * v6.w) * alpha;',
     '  vec3 rgb = (col * body + uGap * line * v6.w) * alpha + rimCol * glow * alpha * 0.55;',
     '  rgb += (h21(gl_FragCoord.xy) - 0.5) / 255.0 * A;',
-    '  gl_FragColor = vec4(rgb, A);',
+    // the frame buffer clamps bright crest light at 1.0 before the scrim darkens it: keep that order
+    '  float S = scrimA(fp);',
+    '  gl_FragColor = vec4(min(rgb, vec3(1.0)) * (1.0 - S) + SCRIM * (S * A), A);',
     '}'
   ].join('\n');
 
@@ -293,6 +392,8 @@
   ].join('\n');
 
   var FS_FX = [
+    'uniform vec2 uRes; uniform vec2 uView;',
+    GLSL_SCRIM,
     'varying vec4 vLoc; varying vec4 vCol;',
     'void main(){',
     '  vec2 q = vLoc.xy; float k = vLoc.w; float r2 = dot(q, q); float a = 0.0;',
@@ -313,31 +414,46 @@
     '    a = (max(s1, s2) * 0.8 + exp(-r2 * 30.0)) * (1.0 - smoothstep(0.75, 1.0, r));',
     '  }',
     '  a *= vCol.a;',
-    '  gl_FragColor = vec4(vCol.rgb * a, 0.0);',          // additive light
+    '  vec2 fp = vec2(gl_FragCoord.x, uView.y - gl_FragCoord.y) * (uRes / uView);',
+    '  gl_FragColor = vec4(vCol.rgb * a * (1.0 - scrimA(fp)), 0.0);',   // additive light (under the scrim)
     '}'
   ].join('\n');
 
-  var FS_SCRIM = [
-    'uniform vec2 uRes; uniform vec2 uView; uniform vec4 uRect; uniform vec4 uS;',
-    'void main(){',
-    '  vec2 p = vec2(gl_FragCoord.x, uView.y - gl_FragCoord.y) * (uRes / uView);',
-    '  vec2 c = (uRect.xy + uRect.zw) * 0.5; vec2 hs = (uRect.zw - uRect.xy) * 0.5;',
-    '  vec2 q = abs(p - c) - hs + 48.0;',
-    '  float sd = length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - 48.0;',
-    '  float a = uS.x * (1.0 - smoothstep(-70.0, 190.0, sd));',
-    '  float l = uS.y * (1.0 - smoothstep(0.0, uS.w, p.x));',
-    '  float bt = uS.z * smoothstep(uRes.y - 96.0, uRes.y, p.y);',
-    '  float A = 1.0 - (1.0 - a) * (1.0 - l) * (1.0 - bt);',
-    '  gl_FragColor = vec4(vec3(0.012, 0.051, 0.098) * A, A);',
-    '}'
-  ].join('\n');
+  // WebGL without a GPU: SwiftShader, llvmpipe / softpipe / lavapipe, WARP ("Microsoft Basic Render Driver"),
+  // Apple's software renderer. Such a context draws on the CPU, next to the page's own (also CPU) compositing.
+  var SOFT_GL = /swiftshader|llvmpipe|softpipe|lavapipe|software|basic render|\bwarp\b|mesa offscreen/i;
+  var softSeen = false;    // a context was refused for a performance caveat earlier in this page
+  function glRendererName(gl) {
+    var s = '';
+    try {
+      s = String(gl.getParameter(gl.RENDERER) || '');
+      // Chrome and Safari mask RENDERER; Firefox reports the real (sanitised) name and warns on the extension
+      if (!s || /^webkit webgl$/i.test(s)) {
+        var ext = gl.getExtension('WEBGL_debug_renderer_info');
+        if (ext) s = String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) || s);
+      }
+    } catch (e) { /* unknown renderer */ }
+    return s;
+  }
 
-  function createGLRenderer(canvas) {
-    var gl = null;
-    // No MSAA: every edge is smoothed in the shaders over one device pixel (uFw).
-    var attrs = { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: true, preserveDrawingBuffer: false };
-    try { gl = canvas.getContext('webgl', attrs) || canvas.getContext('experimental-webgl', attrs); } catch (e) { gl = null; }
+  function createGLRenderer(canvas, forcedTier) {
+    var gl = null, caveat = false;
+    // No MSAA: every edge is smoothed in the shaders over one device pixel (uFw). Ask for a context that is
+    // not software-rendered first; when the browser refuses it, take the software one and run the lite tier.
+    var attrs = { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: true, preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true };
+    try {
+      gl = canvas.getContext('webgl', attrs) || canvas.getContext('experimental-webgl', attrs);
+      if (!gl) {
+        attrs.failIfMajorPerformanceCaveat = false;
+        gl = canvas.getContext('webgl', attrs) || canvas.getContext('experimental-webgl', attrs);
+        caveat = !!gl;
+      }
+    } catch (e) { gl = null; }
     if (!gl) return null;
+    if (caveat) softSeen = true;
+    var gpuName = glRendererName(gl);
+    var soft = softSeen || SOFT_GL.test(gpuName);
+    var lite = forcedTier ? forcedTier === 'lite' : soft;
 
     var prec = 'mediump';
     try {
@@ -345,9 +461,9 @@
       if (hp && hp.precision > 0) prec = 'highp';
     } catch (e) { /* keep mediump */ }
 
-    var R = { kind: 'gl', canvas: canvas, ok: false, failed: false };
-    var P = {}, buf = {}, maxAttr = 0;
-    var wv = null, wvBands = null, fxv = null, fxQuadsMax = 0, fxn = 0, fxViews = [];
+    var R = { kind: 'gl', canvas: canvas, ok: false, failed: false, soft: soft, lite: lite, gpu: gpuName };
+    var P = {}, buf = {}, maxAttr = 0, halfSky = false;
+    var wv = null, wvBands = null, skyV = null, skyU = null, scrimV = new Float32Array(24), fxv = null, fxQuadsMax = 0, fxn = 0, fxViews = [];
 
     function sh(type, src) {
       var s = gl.createShader(type);
@@ -358,12 +474,15 @@
       }
       return s;
     }
-    function prog(vs, fs, attribs) {
-      var p = gl.createProgram();
-      gl.attachShader(p, sh(gl.VERTEX_SHADER, 'precision ' + prec + ' float;\n' + vs));
-      gl.attachShader(p, sh(gl.FRAGMENT_SHADER, 'precision ' + prec + ' float;\n' + fs));
+    function prog(vs, fs, attribs, defs) {
+      var p = gl.createProgram(), head = 'precision ' + prec + ' float;\n' + (lite ? '#define LITE 1\n' : '') + (defs || '');
+      var vsh = sh(gl.VERTEX_SHADER, head + vs), fsh = sh(gl.FRAGMENT_SHADER, head + fs);
+      gl.attachShader(p, vsh);
+      gl.attachShader(p, fsh);
       for (var i = 0; i < attribs.length; i++) gl.bindAttribLocation(p, i, attribs[i]);
       gl.linkProgram(p);
+      // flagged for deletion: freed together with the program (a Pause / Play re-mount leaves nothing behind)
+      gl.deleteShader(vsh); gl.deleteShader(fsh);
       if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error('link: ' + gl.getProgramInfoLog(p));
       var u = {}, n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS) || 0;
       for (var j = 0; j < n; j++) {
@@ -381,16 +500,31 @@
       maxAttr = pr.n;
     }
 
+    function resetAttribs() { for (var i = 0; i < 4; i++) gl.disableVertexAttribArray(i); maxAttr = 0; }
     function init() {
       if (gl.isContextLost()) throw new Error('context lost');
-      maxAttr = 0;
-      P.sky = prog(VS_FULL, FS_SKY, ['aP']);
-      P.scrim = prog(VS_FULL, FS_SCRIM, ['aP']);
-      P.water = prog(VS_WATER, FS_WATER, ['aPos', 'aA', 'aB']);
-      P.fx = prog(VS_FX, FS_FX, ['aPos', 'aLoc', 'aCol']);
-      buf.tri = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf.tri);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      // a re-mount (Pause / Play) gets this canvas's existing context back, with the previous mount's state
+      resetAttribs();
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      // Full tier: the sky (smooth: gradient, slow haze, wide wisps, halo) is shaded at half resolution into a
+      // texture and blitted with the full-resolution dither; the scrim is a pass of its own over the finished
+      // frame. Lite (already a coarse buffer) and a missing render target shade the sky directly.
+      halfSky = !lite && makeSkyTarget();
+      R.halfSky = halfSky;
+      var noScrim = halfSky ? '#define NO_SCRIM 1\n' : '';
+      P.sky = halfSky ? prog(VS_FULL, FS_SKY, ['aP'], '#define SKY_HALF 1\n' + noScrim) : prog(VS_SKY, FS_SKY, ['aP']);
+      P.water = prog(VS_WATER, FS_WATER, ['aPos', 'aA', 'aB'], noScrim);
+      P.fx = prog(VS_FX, FS_FX, ['aPos', 'aLoc', 'aCol'], noScrim);
+      if (halfSky) {
+        P.blit = prog(VS_SKY, FS_BLIT, ['aP']);
+        P.scrim = prog(VS_SKY, FS_SCRIM, ['aP']);
+        gl.useProgram(P.blit.p); gl.uniform1i(P.blit.u.uSky, 1);
+        buf.scrim = gl.createBuffer();
+        buf.tri = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf.tri);
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      }
+      buf.sky = gl.createBuffer();
       buf.wv = gl.createBuffer(); buf.wi = gl.createBuffer();
       buf.fv = gl.createBuffer(); buf.fi = gl.createBuffer();
       fxQuadsMax = 1200;
@@ -415,6 +549,28 @@
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       R.ok = true;
+    }
+    // half-resolution sky render target on texture unit 1 (linear, clamped: valid for any size in WebGL 1)
+    function makeSkyTarget() {
+      try {
+        buf.skyTex = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, buf.skyTex);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 2, 2, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.activeTexture(gl.TEXTURE0);
+        buf.skyFb = gl.createFramebuffer();
+        gl.bindFramebuffer(gl.FRAMEBUFFER, buf.skyFb);
+        gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, buf.skyTex, 0);
+        var ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        buf.tw = 2; buf.th = 2;
+        if (!ok) { gl.deleteFramebuffer(buf.skyFb); gl.deleteTexture(buf.skyTex); buf.skyFb = buf.skyTex = null; }
+        return ok;
+      } catch (e) { gl.activeTexture(gl.TEXTURE0); return false; }
     }
 
     // index buffer for N bands x S samples (+ a lip of LS samples), 3 vertices per sample
@@ -441,6 +597,14 @@
       wvBands = wv.subarray(0, N * S * 3 * 10);      // views are made once per layout, never per frame
       gl.bindBuffer(gl.ARRAY_BUFFER, buf.wv);
       gl.bufferData(gl.ARRAY_BUFFER, wv.byteLength, gl.DYNAMIC_DRAW);
+      skyV = new Float32Array(S * 4); skyU = new Float32Array(S);
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf.sky);
+      gl.bufferData(gl.ARRAY_BUFFER, skyV.byteLength, gl.DYNAMIC_DRAW);
+    }
+    function scrimUniforms(u, sc) {
+      if (!u.uRect) return;                          // NO_SCRIM: the scrim pass applies it later
+      gl.uniform4f(u.uRect, sc.scrim[0], sc.scrim[1], sc.scrim[2], sc.scrim[3]);
+      gl.uniform4f(u.uS, sc.scrim[4], sc.scrim[5], sc.scrim[6], sc.scrim[7]);
     }
 
     function quad(cx, cy, ax, ay, bx, by, kind, param, r, g, b, alpha) {
@@ -460,23 +624,68 @@
       var N = sc.N, S = sc.S, LS = sc.LS, j, b;
       ensureIndices(N, S, LS);
       gl.viewport(0, 0, sc.pw, sc.ph);
+      var xs = sc.xs, fwp = sc.fw, ext = sc.rimExt;
 
-      /* sky */
+      /* sky, rasterised only from the top edge down to just below the water's top: the bands' bodies are
+         opaque below it and cover every pixel there, so the sky would be shaded for nothing. Between two
+         samples every crest is a straight segment, so there the water's top (the highest crest) never lies
+         lower than su = min over the bands of each segment's lower end; the strip reaches su + cut. */
+      var sv = skyV, su = skyU, q = 0, cut = 2 + fwp, yMax = sc.H + 4, yb, e;
+      for (j = 0; j < S - 1; j++) su[j] = 1e9;
+      for (b = 0; b < N; b++) {
+        yb = sc.bands[b].y;
+        for (j = 0; j < S - 1; j++) { e = yb[j] > yb[j + 1] ? yb[j] : yb[j + 1]; if (e < su[j]) su[j] = e; }
+      }
+      for (j = 0; j < S; j++) {
+        e = (j === 0 ? su[0] : (j === S - 1 || su[j - 1] > su[j] ? su[j - 1] : su[j])) + cut;
+        sv[q++] = xs[j]; sv[q++] = -4; sv[q++] = xs[j]; sv[q++] = e < yMax ? e : yMax;
+      }
       gl.disable(gl.BLEND);
-      use(P.sky);
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf.tri);
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
       var u = P.sky.u;
+      if (halfSky) {
+        // the whole sky at half resolution into its texture ...
+        var tw = (sc.pw + 1) >> 1, th = (sc.ph + 1) >> 1;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, buf.skyFb);
+        if (buf.tw !== tw || buf.th !== th) {
+          gl.activeTexture(gl.TEXTURE1);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, tw, th, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+          gl.activeTexture(gl.TEXTURE0);
+          buf.tw = tw; buf.th = th;
+        }
+        gl.viewport(0, 0, tw, th);
+        use(P.sky);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf.tri);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.uniform2f(u.uView, tw, th);
+      } else {
+        use(P.sky);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf.sky);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, sv);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.uniform2f(u.uView, sc.pw, sc.ph);
+      }
       gl.uniform2f(u.uRes, sc.W, sc.H);
-      gl.uniform2f(u.uView, sc.pw, sc.ph);
       gl.uniform4fv(u.uHalo, sc.halo);
       gl.uniform4fv(u.uSkyT, sc.skyT);
       gl.uniform4fv(u.uKeep, sc.keep);
       gl.uniform1f(u.uWisp, sc.wisp);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      scrimUniforms(u, sc);
+      if (halfSky) {
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        // ... then blitted into the strip above the water at full resolution
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+        gl.viewport(0, 0, sc.pw, sc.ph);
+        use(P.blit);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf.sky);
+        gl.bufferSubData(gl.ARRAY_BUFFER, 0, sv);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        gl.uniform2f(P.blit.u.uRes, sc.W, sc.H);
+        gl.uniform2f(P.blit.u.uView, sc.pw, sc.ph);
+      }
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, S * 2);
 
       /* water bands (one draw call, back to front, curl lip last) */
-      var p = 0, xs = sc.xs, fwp = sc.fw, ext = sc.rimExt;
+      var p = 0;
       for (b = 0; b < N; b++) {
         var B = sc.bands[b], y = B.y, minF = B.minF, gpx = B.gap, al = B.alpha;
         var gg = gpx + ext + fwp;
@@ -545,16 +754,20 @@
       gl.uniform4fv(u.uTa, sc.ta);
       gl.uniform4fv(u.uTb, sc.tb);
       gl.uniform4fv(u.uTc, sc.tc);
+      scrimUniforms(u, sc);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf.wi);
       gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 0);
 
       /* light: spray, mist, rings, motes, beads, glints (additive) */
       fxn = 0;
       var Pp = sc.P, i, a, k, s, x0, y0;
+      // lite (coarse buffer): a sprite is never smaller than about one buffer pixel, with the same total light
+      var fxMin = lite ? sc.W / sc.pw : 0, gMin = fxMin * 4;
       for (i = 0; i < Pp.n; i++) {
         a = Pp.a[i];
         if (a < 0.004) continue;
         k = Pp.k[i]; x0 = Pp.x[i]; y0 = Pp.y[i]; s = Pp.s[i];
+        if (s < fxMin && (k === K_DROP || k === K_BIO || k === K_BEAD)) { a *= (s / fxMin) * (s / fxMin); s = fxMin; if (a < 0.004) continue; }
         if (k === K_DROP) {
           var tc = Pp.c[i];
           quad(x0, y0, s * 2.5, 0, 0, s * 2.5, 0, 0, lerp(C.spray[0], C.sprayB[0], tc), lerp(C.spray[1], C.sprayB[1], tc), lerp(C.spray[2], C.sprayB[2], tc), a);
@@ -575,7 +788,9 @@
       }
       var G = sc.G;
       for (i = 0; i < G.n; i++) {
-        if (G.a[i] > 0.004) quad(G.x[i], G.y[i], G.r[i], 0, 0, G.r[i], 3, 0, 0.8, 0.95, 1, G.a[i]);
+        var gr = G.r[i], ga = G.a[i];
+        if (gr < gMin) { ga *= (gr / gMin) * (gr / gMin) * 2; gr = gMin; }
+        if (ga > 0.004) quad(G.x[i], G.y[i], gr, 0, 0, gr, 3, 0, 0.8, 0.95, 1, ga);
       }
       if (fxn > 0) {
         gl.blendFunc(gl.ONE, gl.ONE);
@@ -586,32 +801,48 @@
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 40, 0);
         gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 40, 8);
         gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
-        gl.uniform2f(P.fx.u.uRes, sc.W, sc.H);
+        u = P.fx.u;
+        gl.uniform2f(u.uRes, sc.W, sc.H);
+        gl.uniform2f(u.uView, sc.pw, sc.ph);
+        scrimUniforms(u, sc);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf.fi);
         gl.drawElements(gl.TRIANGLES, fxn * 6, gl.UNSIGNED_SHORT, 0);
       }
 
-      /* readability scrim + bottom fade into the next section */
-      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-      use(P.scrim);
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf.tri);
-      gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-      u = P.scrim.u;
-      gl.uniform2f(u.uRes, sc.W, sc.H);
-      gl.uniform2f(u.uView, sc.pw, sc.ph);
-      gl.uniform4f(u.uRect, sc.scrim[0], sc.scrim[1], sc.scrim[2], sc.scrim[3]);
-      gl.uniform4f(u.uS, sc.scrim[4], sc.scrim[5], sc.scrim[6], sc.scrim[7]);
-      gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (halfSky) {
+        /* readability scrim + bottom fade over the finished frame, rasterised only where it is non-zero:
+           left of where both the copy's halo (copy + 190 px) and the side gradient end, plus the bottom 96 px */
+        var sm = sc.scrim, Wp = sc.W + 1, Hp = sc.H + 1, xL = Math.min(Wp, Math.max(sm[7], sm[2] + 190)), yB = sc.H - 96, n6 = 6;
+        rect(scrimV, 0, -1, -1, xL, Hp);
+        if (xL < Wp) { rect(scrimV, 12, xL, yB, Wp, Hp); n6 = 12; }
+        gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        use(P.scrim);
+        gl.bindBuffer(gl.ARRAY_BUFFER, buf.scrim);
+        gl.bufferData(gl.ARRAY_BUFFER, scrimV, gl.DYNAMIC_DRAW);
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+        u = P.scrim.u;
+        gl.uniform2f(u.uRes, sc.W, sc.H);
+        gl.uniform2f(u.uView, sc.pw, sc.ph);
+        scrimUniforms(u, sc);
+        gl.drawArrays(gl.TRIANGLES, 0, n6);
+      }
     };
+    function rect(a, o, x0, y0, x1, y1) {
+      a[o] = x0; a[o + 1] = y0; a[o + 2] = x1; a[o + 3] = y0; a[o + 4] = x0; a[o + 5] = y1;
+      a[o + 6] = x0; a[o + 7] = y1; a[o + 8] = x1; a[o + 9] = y0; a[o + 10] = x1; a[o + 11] = y1;
+    }
 
     R.restore = function () { buf = {}; P = {}; R.ok = false; init(); };
     R.dispose = function () {
       R.ok = false;
       try {
         if (gl.isContextLost()) return;
-        ['sky', 'scrim', 'water', 'fx'].forEach(function (k) { if (P[k]) gl.deleteProgram(P[k].p); });
-        ['tri', 'wv', 'wi', 'fv', 'fi'].forEach(function (k) { if (buf[k]) gl.deleteBuffer(buf[k]); });
+        resetAttribs();
+        ['sky', 'blit', 'scrim', 'water', 'fx'].forEach(function (k) { if (P[k]) gl.deleteProgram(P[k].p); });
+        ['tri', 'sky', 'scrim', 'wv', 'wi', 'fv', 'fi'].forEach(function (k) { if (buf[k]) gl.deleteBuffer(buf[k]); });
         if (buf.noise) gl.deleteTexture(buf.noise);
+        if (buf.skyFb) gl.deleteFramebuffer(buf.skyFb);
+        if (buf.skyTex) gl.deleteTexture(buf.skyTex);
       } catch (e) { /* ignore */ }
     };
 
@@ -820,6 +1051,8 @@
     try { mq = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null; } catch (e) { mq = null; }
     var forcedRM = typeof opts.reducedMotion === 'boolean';
     var reduced = forcedRM ? opts.reducedMotion : !!(mq && mq.matches);
+    // QA hook (debug mounts only): force the 'full' or 'lite' tier whatever renderer is detected
+    var forcedTier = opts.debug && (opts.tier === 'full' || opts.tier === 'lite') ? opts.tier : '';
 
     var disposers = [], timers = [];
     var destroyed = false;
@@ -861,8 +1094,14 @@
       target = canvas;
       canvas.style.display = saved.display;
     }
+    // Tiers: 'full' on a GPU; 'lite' (small buffer, ~20 fps, simpler shading, fewer particles) when WebGL is
+    // software-rendered, or missing altogether (in a current browser that almost always means no usable GPU,
+    // and the 2D fallback would then rasterise on the CPU too).
+    var lite = forcedTier === 'lite';
     if (opts.renderer !== '2d') {
-      glR = createGLRenderer(canvas);
+      glR = createGLRenderer(canvas, forcedTier);
+      if (glR) lite = glR.lite;
+      else if (!forcedTier) lite = true;
       if (glR && glR.failed) {
         // a WebGL context exists but the shaders failed: 2D must live on a sibling canvas
         try { glR.dispose(); } catch (e) { /* ignore */ }
@@ -897,8 +1136,11 @@
     var broke = false;
     var dirty = true, bufDirty = true, baseMoving = false;
     var raf = 0, lastTs = 0, visible = true, debugPaused = false;
-    var lastDrawTs = 0, scrollingUntil = 0;     // frame governor (see frame())
-    var perf = { acc: 0, n: 0, last: 0, warm: 0 };
+    var lastDrawTs = 0, drawn = 0;                // frame governor (see frame())
+    var frozen = false, freezeTimer = 0, quietAt = 0, freezes = 0, thawAt = 0;   // scroll freeze (see onScrollish())
+    var perf = { acc: 0, n: 0, last: 0, warm: 0, over: 0, up: 0, upAt: -1e9, lock: false, steps: 0 };
+    var d0 = 1;                                   // buffer scale before the adaptive factor (dprScale)
+    var liteSlow = false;                         // lite tier over budget: ~15 fps instead of ~20 (see judge())
     var lip = {
       active: false, alpha: 1, g: 1.5, x: new Float32Array(LS), y: new Float32Array(LS), nx: new Float32Array(LS),
       ny: new Float32Array(LS), w: new Float32Array(LS), u: new Float32Array(LS), foam: new Float32Array(LS)
@@ -987,10 +1229,13 @@
     function computeBuffer() {
       var dev = window.devicePixelRatio || 1;
       var is2d = R && R.kind === '2d';
-      var d = Math.min(dev, is2d ? 1 : 1.5);
-      var budget = is2d ? (W < 700 ? 0.5e6 : 0.8e6) : (W < 700 ? 1.1e6 : 2.2e6);   // max drawing-buffer pixels (2D rasterises on the CPU)
+      // max drawing-buffer pixels (2D rasterises on the CPU; lite = no GPU at all, CSS upscales the buffer)
+      var d = Math.min(dev, lite || is2d ? 1 : 1.5);
+      var budget = lite ? (is2d ? (W < 700 ? 0.06e6 : 0.12e6) : (W < 700 ? 0.08e6 : 0.16e6))
+        : (is2d ? (W < 700 ? 0.5e6 : 0.8e6) : (W < 700 ? 1.1e6 : 2.2e6));
       if (W * H * d * d > budget) d = Math.sqrt(budget / (W * H));
-      d = Math.max(0.5, d * dprScale);
+      d0 = d;
+      d = Math.max(lite ? 0.2 : 0.5, d * dprScale);
       dpr = d;
       pw = Math.max(1, Math.round(W * d)); ph = Math.max(1, Math.round(H * d));
       bufDirty = false;
@@ -1000,7 +1245,7 @@
       if (bufDirty) computeBuffer();
       if (target.width !== pw) target.width = pw;
       if (target.height !== ph) target.height = ph;
-      scene.pw = pw; scene.ph = ph; scene.fw = 1 / dpr;
+      scene.pw = pw; scene.ph = ph; scene.fw = (lite ? 1.5 : 1) / dpr;   // edge anti-aliasing width, CSS px
     }
 
     function makeBand(b) {
@@ -1021,7 +1266,8 @@
       s = clamp(Math.min(W / 1440, H / 850) * 0.5 + 0.5, 0.62, 1.2);
       if (mobile) s = clamp(W / 600, 0.55, 0.8);
       var nN = mobile ? 4 : 5;
-      var nsx = Math.max(mobile ? 4 : 6, (W + 2 * pad) / 560);
+      // crest sample spacing (CSS px): lite halves the geometry - its coarse buffer could not show the finer step
+      var nsx = Math.max(lite ? 12 : (mobile ? 4 : 6), (W + 2 * pad) / (lite ? 280 : 560));
       var nS = Math.ceil((W + 2 * pad) / nsx) + 1;
       var ndx = mobile ? 9 : 12;
       var nM = Math.ceil((W + 2 * pad) / ndx) + 2;
@@ -1219,13 +1465,13 @@
       }
     }
     function addDrop(x, y, vx, vy, size, life, minVx) {
-      if (kinds[K_DROP] >= (mobile ? 240 : 560)) return;
+      if (kinds[K_DROP] >= (lite ? (mobile ? 110 : 220) : (mobile ? 240 : 560))) return;
       if (minVx !== undefined && vx < minVx) vx = minVx + (vx - minVx) * 0.15;
       if (keepFade(x, y) <= 0) return;
       spawn(K_DROP, x, y, vx, vy, life, size, 1, bandBelow(x, y + 30));
     }
     function addMist(x, y, r, a, vx, vy, life) {
-      if (kinds[K_MIST] >= 70) return;
+      if (kinds[K_MIST] >= (lite ? 36 : 70)) return;
       spawn(K_MIST, x, y, vx, vy, life, r, a, N - 1);
     }
     function addRing(x, y, rmax, life, a, b) {
@@ -1247,7 +1493,7 @@
     // soft lit ripple rings and a pulse through nearby bands
     function splashAt(x, y, power, dir) {
       power = power || 1; dir = dir || 0;
-      var n = Math.round((mobile ? 38 : 72) * power), scl = mobile ? 0.72 : 1, pwr = Math.min(dir > 0 ? 1.22 : 1.45, Math.sqrt(power));
+      var n = Math.round((mobile ? 38 : 72) * power * (lite ? 0.55 : 1)), scl = mobile ? 0.72 : 1, pwr = Math.min(dir > 0 ? 1.22 : 1.45, Math.sqrt(power));
       var bias = 0.16 + (hasKeep && x < keepX1 + 220 && y > keepY0 - 40 ? 0.22 : 0);   // lean away from the copy
       for (var i = 0; i < n; i++) {
         var ang = -Math.PI / 2 + (Math.random() - 0.5) * 1.35 + dir * 0.3 + bias;
@@ -1572,7 +1818,18 @@
     /* ---- pointer ---- */
     function localXY(e) {
       var r = target.getBoundingClientRect();
+      ptr.cx = e.clientX; ptr.cy = e.clientY;
       ptr.x = e.clientX - r.left; ptr.y = e.clientY - r.top;
+    }
+    // After a scroll the hero has moved under a pointer that may not have moved at all: re-read where it
+    // now is over the water and settle there, so the jump is not taken for a fast swipe (wake, spray).
+    function resyncPointer() {
+      if (!ptr.inside || ptr.cx === undefined) return;
+      var r = target.getBoundingClientRect();
+      var x = ptr.cx - r.left, y = ptr.cy - r.top;
+      if (x < 0 || y < 0 || x > r.width || y > r.height) { ptr.inside = false; return; }
+      ptr.x = ptr.sx = x; ptr.y = ptr.sy = y; ptr.vx = 0; ptr.vy = 0;
+      ptr.prevSide.fill(0);
     }
     function onMove(e) {
       localXY(e);
@@ -1755,48 +2012,100 @@
       scene.t = t;
     }
 
-    function render() { R.draw(scene); }
+    function render() { R.draw(scene); drawn++; }
 
     function running() { return !destroyed && !!R && !reduced && visible && !doc.hidden && !debugPaused; }
 
+    // Adaptive cost, judged at rest on the real frame interval in half-second windows (never while
+    // scrolling: nothing is drawn then): two windows over budget in a row (~1 s) take one step down; ~6 s
+    // comfortably within budget take one step back up - unless that step up led straight back over budget
+    // (a step down within ~5 s of it), in which case it stays down (hysteresis: no see-sawing).
+    // Full tier (GPU-bound): the buffer, 15% a step. Lite (software rendering, where compositing each new
+    // frame of the page costs as much as drawing it): 20 -> 15 fps first, then one buffer step at most.
+    function judge(dt, ts) {
+      perf.last = Math.round(dt * 1000);
+      // skip the first frames after a (re)start or a change of step, and the page's own loading
+      if (++perf.warm <= 4 || doc.readyState !== 'complete') return;
+      perf.acc += dt; perf.n++;
+      if (perf.acc < 0.5 || perf.n < 3) return;
+      var avg = perf.acc / perf.n, win = perf.acc, goal = lite ? (liteSlow ? 1 / 15 : 0.05) : 1 / 60;
+      var floor = lite ? 0.85 : (d0 > 1.01 ? 0.62 : 0.8);
+      perf.acc = 0; perf.n = 0;
+      if (avg > goal * 1.33) {
+        perf.up = 0;
+        if (++perf.over >= 2) {
+          perf.over = 0;
+          var canDown = (lite && !liteSlow) || dprScale > floor + 1e-3;
+          if (canDown) {
+            if (ts - perf.upAt < 5000) perf.lock = true;
+            if (lite && !liteSlow) liteSlow = true;
+            else { dprScale = Math.max(floor, dprScale * 0.85); bufDirty = true; }
+            perf.warm = 0; perf.steps++;
+          }
+        }
+      } else {
+        perf.over = 0;
+        if (avg < goal * 1.1 && (dprScale < 1 || liteSlow) && !perf.lock) {
+          perf.up += win;
+          if (perf.up >= 6) {
+            perf.up = 0; perf.upAt = ts; perf.warm = 0; perf.steps++;
+            if (dprScale < 1) { dprScale = Math.min(1, dprScale / 0.85); bufDirty = true; } else liteSlow = false;
+          }
+        } else perf.up = 0;
+      }
+    }
+
     function frame(ts) {
       raf = 0;
-      if (!running()) { lastTs = 0; return; }
-      // Frame governor: while the page is scrolling the hero is sliding away, so the water updates at
-      // ~30 fps and the GPU is left to the scroll itself; at rest it runs at the display rate, capped at
-      // ~60-80 fps on high-refresh screens. dt still spans skipped frames, so motion speed is unchanged.
-      var scrolling = ts < scrollingUntil;
-      if (lastDrawTs && ts - lastDrawTs < (scrolling ? 25 : 10.5)) { raf = requestAnimationFrame(frame); return; }
+      if (frozen || !running()) { lastTs = 0; return; }
+      // Frame governor: the display rate, capped at ~95 fps on high-refresh screens; ~20 fps in the lite
+      // tier (~15 when it is over budget, see judge()). dt spans skipped frames, so the motion speed never changes.
+      if (lastDrawTs && ts - lastDrawTs < (lite ? (liteSlow ? 63 : 47) : 10.5)) { raf = requestAnimationFrame(frame); return; }
       lastDrawTs = ts;
       var now = ts / 1000;
-      var dt = lastTs ? Math.min(Math.max(now - lastTs, 0), 0.25) : 0;
+      // the first frame after a (re)start takes one nominal step: a resume never jumps ahead or repeats a frame
+      var measured = lastTs > 0;
+      var dt = measured ? Math.min(Math.max(now - lastTs, 0), 0.25) : (lite ? (liteSlow ? 1 / 15 : 0.05) : 1 / 60);
       lastTs = now;
       try {
         if (dirty) { measure(); layout(); }
-        // adaptive resolution: if frames are consistently slow at rest, lower the buffer scale (buffer only,
-        // no re-layout); never judged while scrolling, when frames are deliberately spaced out
-        if (dt > 0 && R.kind === 'gl' && !scrolling) {
-          perf.last = Math.round(dt * 1000);
-          if (++perf.warm > 30) {
-            perf.acc += dt; perf.n++;
-            if (perf.n >= 90) {
-              if (perf.acc / perf.n > 1 / 38 && dprScale > (dpr > 1.01 ? 0.62 : 0.8)) { dprScale *= 0.85; bufDirty = true; }
-              perf.acc = 0; perf.n = 0;
-            }
-          }
-        }
+        if (measured && dt > 0) judge(dt, ts);
         step(dt);
         applyBuffer();
         render();
       } catch (e) {
         fail();
       }
-      if (running() && !raf) raf = requestAnimationFrame(frame);
+      if (running() && !raf && !frozen) raf = requestAnimationFrame(frame);
     }
     function kick() {
-      if (!raf && running()) { lastTs = 0; lastDrawTs = 0; raf = requestAnimationFrame(frame); }
+      if (!raf && !frozen && running()) {
+        lastTs = 0; lastDrawTs = 0; perf.warm = 0; perf.acc = 0; perf.n = 0;
+        raf = requestAnimationFrame(frame);
+      }
     }
     function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; lastTs = 0; lastDrawTs = 0; }
+
+    // Scroll freeze: while the page scrolls nothing is drawn (no WebGL, no logo style writes), so the
+    // compositor and the GPU have the scroll to themselves. The hero is sliding away and its last frame just
+    // moves with it; ~150 ms after the last scroll / wheel / touchmove the water carries on from where it was.
+    var FREEZE_MS = 150;
+    function onScrollish() {
+      quietAt = performance.now() + FREEZE_MS;
+      if (frozen || destroyed || reduced) return;
+      frozen = true; freezes++;
+      if (raf) { cancelAnimationFrame(raf); raf = 0; }
+      freezeTimer = setTimeout(thaw, FREEZE_MS + 5);
+    }
+    function thaw() {
+      freezeTimer = 0;
+      if (destroyed) return;
+      var rem = quietAt - performance.now();
+      if (rem > 1) { freezeTimer = setTimeout(thaw, rem + 5); return; }
+      frozen = false; thawAt = performance.now();
+      try { resyncPointer(); } catch (e) { /* keep the previous position */ }
+      kick();
+    }
 
     // Something broke while drawing: WebGL -> 2D sibling, 2D -> the static CSS backdrop.
     function fail() {
@@ -1862,6 +2171,7 @@
       if (destroyed || !R) return;
       dirty = true;
       if (reduced) { safeStatic(); return; }
+      if (frozen && visible && !doc.hidden) return;   // redrawn at the new size the moment the scroll settles
       if (!raf) {
         // paused (offscreen / hidden): repaint the frozen frame at the new size right away
         try { measure(); layout(); step(0); applyBuffer(); render(); } catch (e) { fail(); }
@@ -1885,7 +2195,10 @@
     }
     if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(function () { if (!destroyed) onResize(); }, noop);
     on(doc, 'visibilitychange', function () { if (doc.hidden) stop(); else kick(); });
-    on(window, 'scroll', function () { scrollingUntil = performance.now() + 160; }, { passive: true });
+    var pasv = { passive: true };
+    on(window, 'scroll', onScrollish, pasv);
+    on(window, 'wheel', onScrollish, pasv);
+    on(window, 'touchmove', onScrollish, pasv);
     if (interactive) {
       var pas = { passive: true };
       on(host, 'pointermove', guard(onMove), pas);
@@ -1965,6 +2278,7 @@
     function cleanup() {
       destroyed = true;
       stop();
+      if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = 0; }
       while (timers.length) clearTimeout(timers.pop());
       if (ro) ro.disconnect();
       if (io) io.disconnect();
@@ -1992,10 +2306,13 @@
       api.stats = function () {
         return {
           renderer: R ? R.kind : 'static', sibling: !!sibling, held: held, introT: +introT.toFixed(2), t: +t.toFixed(2), dpr: +dpr.toFixed(3),
+          tier: lite ? 'lite' : 'full', halfSky: !!(R && R.halfSky), gpu: glR ? glR.gpu : '', softGL: glR ? glR.soft : null, frozen: frozen, freezes: freezes, drawn: drawn, lastScrollAt: quietAt - FREEZE_MS, thawAt: thawAt,
+          dprScale: +dprScale.toFixed(3), scaleSteps: perf.steps, scaleLocked: perf.lock, fpsCap: lite ? (liteSlow ? 15 : 20) : 95,
           buffer: [pw, ph], running: !!raf, frameMs: perf.last, particles: P.n, drops: kinds[K_DROP], mists: kinds[K_MIST],
           rings: kinds[K_RING], bio: kinds[K_BIO], beads: kinds[K_BEAD], bands: N, broke: broke,
           surge: surge ? +(introT - surge.t0).toFixed(2) : null, nextSet: +nextSet.toFixed(2), nextWind: +nextWind.toFixed(2),
           logoClip: logo ? logo.style.clipPath : null, keep: [keepX0, keepY0, keepX1, keepY1], pokes: pokes,
+          ptr: { x: +ptr.x.toFixed(1), y: +ptr.y.toFixed(1), sx: +ptr.sx.toFixed(1), sy: +ptr.sy.toFixed(1), vx: +ptr.vx.toFixed(1), vy: +ptr.vy.toFixed(1), inside: ptr.inside, str: +ptr.str.toFixed(2) },
           inKeep: (function () { var n = 0; for (var i = 0; i < P.n; i++) if (P.a[i] > 0.01 && P.x[i] > keepX0 && P.x[i] < keepX1 && P.y[i] > keepY0 && P.y[i] < keepY1) n++; return n; })()
         };
       };
@@ -2013,6 +2330,8 @@
         pointer: function (x, y, mouse) { ptr.x = x; ptr.y = y; ptr.inside = true; ptr.mouse = mouse !== false; ptr.lastMove = performance.now(); if (ptr.sx < -1000) { ptr.sx = x; ptr.sy = y; } },
         fail: function () { fail(); },
         time: function (T) { t = +T || 0; },
+        scale: function (f) { dprScale = clamp(+f || 1, 0.2, 1); perf.lock = true; bufDirty = true; },   // pin the buffer scale
+        freeze: function () { onScrollish(); },
         probe: function (x) {
           var FB = bands[N - 1];
           return { crest: +crestAt(FB, x).toFixed(1), base: +baseAt(FB, x).toFixed(1), sim: +simAt(FB, x).toFixed(1), surge: +surgeAt(0, x).toFixed(1), surgeOn: !!surge, ptrStr: +ptr.str.toFixed(2) };
