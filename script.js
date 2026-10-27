@@ -438,6 +438,45 @@ const CONFIG = {
   });
 
   /* ------------------------------------------------------------------
+     Rates: Monthly / Yearly switch. Without this script the switch stays
+     hidden and the table shows every price (yearly as a second line).
+     ------------------------------------------------------------------ */
+  var ratesCompare = document.getElementById("ratesCompare");
+  if (ratesCompare) {
+    var billingGroup = ratesCompare.querySelector(".billing");
+    var billingButtons = ratesCompare.querySelectorAll(".billing-opt");
+    var ratesScroll = document.getElementById("ratesTable");
+    var setBilling = function (mode) {
+      ratesCompare.setAttribute("data-billing", mode);
+      billingButtons.forEach(function (b) {
+        b.setAttribute("aria-pressed", String(b.getAttribute("data-billing") === mode));
+      });
+    };
+    // a link straight to a yearly plan (#plan-web-yr, #plan-bundle-yr) opens on Yearly
+    setBilling(/^#plan-[a-z]+-yr$/.test(window.location.hash) ? "yearly" : "monthly");
+    if (billingGroup) billingGroup.hidden = false;
+    billingButtons.forEach(function (b) {
+      b.addEventListener("click", function () { setBilling(b.getAttribute("data-billing")); });
+    });
+    // the Services prices link to monthly plans: show that period before the page jumps there
+    document.addEventListener("click", function (e) {
+      var link = e.target.closest ? e.target.closest('a[href^="#plan-"]') : null;
+      if (!link) return;
+      var period = /-(mo|yr)$/.exec(link.getAttribute("href"));
+      if (period) setBilling(period[1] === "yr" ? "yearly" : "monthly");
+    });
+    // the table is a keyboard stop only while it actually scrolls sideways (phones)
+    if (ratesScroll) {
+      var syncScrollStop = function () {
+        if (ratesScroll.scrollWidth > ratesScroll.clientWidth + 1) ratesScroll.setAttribute("tabindex", "0");
+        else ratesScroll.removeAttribute("tabindex");
+      };
+      syncScrollStop();
+      window.addEventListener("resize", syncScrollStop, { passive: true });
+    }
+  }
+
+  /* ------------------------------------------------------------------
      "Manage subscription" — Stripe customer portal (hidden until set)
      ------------------------------------------------------------------ */
   var portalUrl = isBlank(STRIPE.customerPortalUrl) ? null : stripeUrl(STRIPE.customerPortalUrl, PORTAL_HOSTS);

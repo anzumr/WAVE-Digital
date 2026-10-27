@@ -18,6 +18,7 @@
   --header-h:86px;
   --font:'Schibsted Grotesk',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   /* the one drawn "leaves this site" arrow, used as a mask so it takes the text colour */
+  --i-check:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M5 12.5l4.5 4.5L19 7.5%27 fill=%27none%27 stroke=%27%23000%27 stroke-width=%272.4%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E");
   --i-ext:url("data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath d=%27M7 17 17 7M8.5 7H17v8.5%27 fill=%27none%27 stroke=%27%23000%27 stroke-width=%272%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27/%3E%3C/svg%3E");
 }
 
@@ -210,11 +211,6 @@ h3,h4{letter-spacing:-.01em}
   background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='48' viewBox='0 0 1200 48'%3E%3Cg fill='none' stroke='%2370e5f2' stroke-linecap='round'%3E%3Cpath d='M0 22Q150 6 300 22T600 22T900 22T1200 22' stroke-opacity='.42' stroke-width='1.3'/%3E%3Cpath d='M0 29Q150 15 300 29T600 29T900 29T1200 29' stroke-opacity='.15' stroke-width='1'/%3E%3C/g%3E%3C/svg%3E") repeat-x -180px 50%/1200px 48px,
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='48' viewBox='0 0 800 48'%3E%3Cpath d='M0 26Q100 36 200 26T400 26T600 26T800 26' fill='none' stroke='%2312a8ec' stroke-opacity='.3' stroke-width='1' stroke-linecap='round'/%3E%3C/svg%3E") repeat-x -430px 50%/800px 48px}
 
-/* ---------- surfaces (shared) ---------- */
-/* flat, bordered, still: only things that act respond to the pointer */
-.card{position:relative;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}
-.card:focus-within{border-color:rgba(112,229,242,.5)}
-
 /* ---------- about: the name is the structure (W·A·V·E) ---------- */
 .about{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:72px;align-items:start}
 .about>.section-label{grid-column:1/-1}
@@ -283,32 +279,67 @@ h3,h4{letter-spacing:-.01em}
 .rate-note{font-size:13px;line-height:1.4;color:var(--muted)}
 @media (hover:hover){.service-rate:hover .rate-amount{text-decoration-color:var(--cyan);text-decoration-thickness:2px}}
 
-/* ---------- rates ---------- */
-.price-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:72px 0 22px;padding-bottom:14px;border-bottom:1px solid var(--line-soft)}
-.section-head+.price-heading{margin-top:56px}
-.price-heading h3{font-size:24px;font-weight:700;letter-spacing:-.015em}
+/* ---------- rates: one comparison table, Monthly | Yearly ---------- */
+/* Without script.js .rates-compare has no data-billing: every price shows, the yearly one as a
+   second line under the monthly one. The switch sets data-billing and shows one period. */
+.rates-compare[data-billing="yearly"] .bill-mo,
+.rates-compare[data-billing="monthly"] .bill-yr,
+.rates-compare:not([data-billing="yearly"]) .yr-only{display:none}
+
+.billing{display:inline-flex;gap:4px;margin:48px 0 28px;padding:4px;border:1px solid var(--line);border-radius:12px}
+.billing-opt{min-height:44px;padding:0 22px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-size:15px;font-weight:600;transition:background-color .18s,color .18s}
+.billing-opt[aria-pressed="true"]{background:#12324a;color:var(--white)}
+@media (hover:hover){.billing-opt[aria-pressed="false"]:hover{color:var(--white);background:rgba(112,229,242,.06)}}
+.section-head+.rates-compare>.rates-scroll{margin-top:48px}
+.scroll-hint{display:none}
+
+.rates-scroll{position:relative;overflow-x:auto;overscroll-behavior-x:contain;border-radius:var(--radius)}
+.rates-scroll:focus-visible{outline-offset:4px}
+.rates-table{width:100%;min-width:720px;table-layout:fixed;border-collapse:separate;border-spacing:0;font-variant-numeric:lining-nums}
+.rates-table .c-feat{width:26%}
+.rates-table th,.rates-table td{padding:0 14px;font-weight:inherit}
+
+/* plan heads: name, price and its note line up across the row */
+.rates-table thead th{position:relative;padding:50px 16px 26px;text-align:center;vertical-align:top}
+.plan-name{display:flex;align-items:flex-end;justify-content:center;min-height:2.6em;font-size:17px;font-weight:650;line-height:1.3;scroll-margin-top:72px}
+.plan-price{margin:12px 0 0;font-size:clamp(28px,2.6vw,36px);font-weight:750;line-height:1.1;letter-spacing:-.02em;white-space:nowrap;color:#fff}
+.plan-price small{margin-left:2px;font-size:14px;font-weight:500;letter-spacing:0;color:var(--muted)}
+.plan-note{display:block;min-height:2.9em;margin-top:8px;font-size:13.5px;font-weight:400;line-height:1.45;letter-spacing:0;white-space:normal;color:var(--muted)}
+.plan-none{padding-top:8px;font-size:17px;font-weight:600;letter-spacing:0;color:var(--muted)}
+/* no script: the yearly price reads as a second, quieter line */
+.rates-compare:not([data-billing]) .plan-price.bill-yr{margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:20px}
+.rates-compare:not([data-billing]) .plan-price.bill-yr .plan-note{min-height:0}
+.tag{display:inline-block;font-size:12px;font-weight:700;line-height:1.2;letter-spacing:.06em;color:#051c2b;background:var(--cyan);padding:4px 9px;border-radius:5px}
+.rates-table thead .tag:first-child{position:absolute;top:16px;left:50%;transform:translateX(-50%);white-space:nowrap}
+.tag-line{margin-top:10px;font-size:11.5px;letter-spacing:.04em;white-space:normal;text-wrap:balance}
+
+/* what's included: grouped by the Full WAVE Package's own three parts */
+.rates-table tbody th{text-align:left;font-size:15px;line-height:1.4;color:var(--text-2)}
+.rates-table tbody th[scope="row"]{height:52px}
+.rates-table tbody td{text-align:center;vertical-align:middle}
+.rates-table tbody tr>*{border-top:1px solid var(--line-soft)}
+.rates-table tr.group>*{padding-top:26px;padding-bottom:10px;border-top-color:var(--line)}
+.rates-table tr.group th{font-size:13px;font-weight:600;letter-spacing:.01em;color:var(--muted)}
+.rates-table .col-f{background:var(--featured)}
+.rates-table thead .col-f{border-radius:14px 14px 0 0}
+.rates-table tfoot .col-f{border-radius:0 0 14px 14px}
+.yes{display:inline-block;vertical-align:middle;width:18px;height:18px;background:var(--cyan);-webkit-mask:var(--i-check) center/contain no-repeat;mask:var(--i-check) center/contain no-repeat}
+.no{display:inline-block;vertical-align:middle;width:12px;height:1.5px;border-radius:1px;background:#58778a}
+
+/* each plan's button */
+.rates-table tfoot td{padding:22px 12px 24px;border-top:1px solid var(--line-soft);vertical-align:top}
+.rates-table tfoot .btn{width:100%;padding-left:12px;padding-right:12px;white-space:nowrap}
+.rates-table tfoot .btn+.btn{margin-top:10px}
+
+/* one-time services: a ruled list in the table's rhythm */
+.price-heading{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:80px 0 0;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.price-heading h3{font-size:22px;font-weight:700;letter-spacing:-.015em}
 .price-heading span{flex:none;font-size:14px;color:var(--muted)}
-.price-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
-.price-grid.yearly{grid-template-columns:repeat(2,minmax(0,1fr))}
-.price-grid.onetime{grid-template-columns:repeat(3,minmax(0,1fr))}
-.price-card{display:flex;flex-direction:column;min-width:0;padding:30px 24px 24px}
-.price-card h4{font-size:17px;font-weight:650;margin:4px 0 16px}
-/* service prices link here: land the whole card clear of the sticky header, not just its title */
-.price-card h4{scroll-margin-top:48px}
-.price{font-size:clamp(28px,2.6vw,38px);font-weight:750;line-height:1.05;letter-spacing:-.02em;white-space:nowrap;color:#fff;font-variant-numeric:lining-nums}
-.price small{font-size:14px;font-weight:500;letter-spacing:0;color:var(--muted);margin-left:3px}
-.price-note{color:var(--muted);font-size:14px;line-height:1.5;min-height:42px;margin:12px 0 0}
-.price-card ul{list-style:none;padding:16px 0 0;margin:8px 0 26px;border-top:1px solid var(--line-soft);color:#d5e5ed;font-size:14.5px;line-height:1.45;display:grid;gap:10px}
-.price-card li{position:relative;padding-left:22px}
-.price-card li::before{content:"";position:absolute;left:1px;top:.4em;width:9px;height:5px;border-left:1.5px solid var(--muted);border-bottom:1.5px solid var(--muted);transform:rotate(-45deg)}
-.price-card .btn{margin-top:auto;width:100%}
-.price-grid.onetime .price-note{min-height:0;margin-bottom:24px}
-/* the recommended plans: the logo's deep blue and a cyan edge; only they carry the solid button */
-.price-card.featured{border-color:rgba(112,229,242,.75);background:var(--featured);box-shadow:0 22px 40px -28px rgba(0,0,0,.85)}
-.price-card.featured .price-note,.price-card.featured .price small{color:#bcd6e2}
-.price-card.featured li::before{border-color:var(--sky)}
-/* the tab hangs from the top edge, so plan names and prices line up across each row */
-.popular{position:absolute;top:-1px;left:24px;margin:0;font-size:12px;line-height:1.2;font-weight:700;letter-spacing:.06em;color:#051c2b;background:var(--cyan);padding:5px 10px 6px;border-radius:0 0 8px 8px}
+.onetime{list-style:none;margin:0;padding:0}
+.onetime-item{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,6fr) auto minmax(190px,auto);column-gap:32px;align-items:center;padding:18px 0;border-bottom:1px solid var(--line-soft)}
+.onetime-item h4{font-size:17px;font-weight:650;line-height:1.3;scroll-margin-top:32px}
+.onetime-note{margin:0;font-size:15px;line-height:1.5;color:var(--muted)}
+.onetime-price{margin:0;font-size:24px;font-weight:750;letter-spacing:-.02em;text-align:right}
 
 /* ---------- contact ---------- */
 .contact-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:72px;align-items:start}
@@ -475,7 +506,11 @@ h3,h4{letter-spacing:-.01em}
 @media(max-width:1050px){
   .links{gap:20px}
   .brand-text small{display:none}
-  .price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .onetime-item{grid-template-columns:minmax(0,1fr) auto minmax(180px,auto);row-gap:2px}
+  .onetime-item h4{grid-column:1;grid-row:1}
+  .onetime-note{grid-column:1;grid-row:2}
+  .onetime-price{grid-column:2;grid-row:1/3}
+  .onetime-item .btn{grid-column:3;grid-row:1/3}
   .service{grid-template-columns:minmax(0,4fr) minmax(0,6fr) minmax(0,4fr);column-gap:28px}
   .service h3{font-size:22px}
   .about,.contact-grid{column-gap:48px}
@@ -513,7 +548,7 @@ h3,h4{letter-spacing:-.01em}
   .hero-inner>p{font-size:17px}
   .section{padding:80px 0}
   .section-label{margin-bottom:32px}
-  .portfolio-grid,.price-grid,.price-grid.yearly,.price-grid.onetime{grid-template-columns:1fr}
+  .portfolio-grid{grid-template-columns:1fr}
   .project-visual{height:280px}
   .project-cta{flex-direction:column;align-items:flex-start;padding:28px 24px;gap:22px;min-height:0}
   .cta-tag{top:auto;bottom:48px;right:24px}
@@ -523,15 +558,31 @@ h3,h4{letter-spacing:-.01em}
   .service p{grid-column:1/-1;grid-row:2;margin-top:8px}
   .service-rate{grid-row:1;grid-column:2}
   .mission{font-size:19px}
-  .price-heading h3{font-size:22px}
-  .price-note{min-height:0}
-  .price-card{padding:28px 20px 20px}
-  /* one-time services: name and price on one line */
-  .price-grid.onetime .price-card{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:16px;align-items:baseline;padding:22px 20px 20px}
-  .price-grid.onetime .price-card h4{margin:0}
-  .price-grid.onetime .price{font-size:30px}
-  .price-grid.onetime .price-note{grid-column:1/-1;margin:6px 0 18px}
-  .price-grid.onetime .btn{grid-column:1/-1}
+  /* rates: the table scrolls sideways inside its own panel; the feature names stay put */
+  .billing{display:flex;margin:36px 0 18px}
+  .billing:not([hidden])+.scroll-hint{margin-top:0}
+  .billing-opt{flex:1 1 0}
+  .scroll-hint{display:flex;align-items:center;gap:8px;margin:28px 0 12px;font-size:13px;color:var(--muted)}
+  .scroll-hint svg{flex:none;width:16px;height:16px;fill:none;stroke:var(--cyan);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .section-head+.rates-compare>.rates-scroll{margin-top:0}
+  .rates-scroll{background:#061827;border:1px solid var(--line);scroll-snap-type:x proximity;scroll-padding-left:118px}
+  .rates-table{min-width:812px}
+  .rates-table .c-feat{width:118px}
+  .rates-table thead th{padding:48px 12px 20px;scroll-snap-align:start}
+  .rates-table thead .col-f{border-radius:0}
+  .rates-table tfoot .col-f{border-radius:0}
+  .plan-price{font-size:25px}
+  .rates-table tbody th{padding:0 10px 0 14px;font-size:14px}
+  .rates-table tr.group th{font-size:12.5px}
+  .rates-table tfoot td{padding:18px 10px 20px}
+  .rates-table tfoot .btn{gap:.4em;padding-left:10px;padding-right:10px;font-size:14px}
+  /* the first column holds still while the plans scroll under its edge */
+  .rates-table tbody th,.rates-table .corner{position:sticky;left:0;z-index:1;background:#061827;box-shadow:1px 0 0 var(--line)}
+  .price-heading{margin-top:64px}
+  .onetime-item{grid-template-columns:minmax(0,1fr) auto;column-gap:16px;padding:18px 0 20px}
+  .onetime-item h4,.onetime-note{grid-column:1}
+  .onetime-price{grid-column:2;grid-row:1;font-size:22px}
+  .onetime-item .btn{grid-column:1/-1;grid-row:3;margin-top:14px;width:100%}
   .contact-form{padding:22px}
 }
 @media(max-width:560px){
@@ -555,6 +606,14 @@ h3,h4{letter-spacing:-.01em}
   .preview-content{inset:58px 20px 18px}
 }
 @media(max-width:360px){
+  /* narrower columns so the next plan still peeks past the edge */
+  .rates-scroll{scroll-padding-left:104px}
+  .rates-table{min-width:744px}
+  .rates-table .c-feat{width:104px}
+  .rates-table thead th{padding-left:10px;padding-right:10px}
+  .rates-table tbody th{padding:0 8px 0 12px;font-size:13.5px}
+  .plan-price{font-size:21px}
+  .rates-table tfoot td{padding-left:8px;padding-right:8px}
   .brand{gap:10px;min-height:44px}
   .footer-nav{gap:4px 10px;font-size:13px}
   .btn.schedule{font-size:14px;padding:15px 14px}

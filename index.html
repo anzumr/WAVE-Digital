@@ -195,79 +195,100 @@
         <p class="lead">Choose monthly support, pay annually, or launch with a one-time service.</p>
       </div>
 
-      <div class="price-heading" data-reveal><h3>Monthly subscriptions</h3><span>Recurring</span></div>
-      <div class="price-grid">
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-web-mo">Website Creation</h4>
-          <div class="price">$100–$150<small>/mo</small></div>
-          <p class="price-note">+$100 one-time signup fee</p>
-          <ul><li>Custom website</li><li>Hosting &amp; maintenance</li><li>Ongoing updates</li></ul>
-          <button class="btn ghost pay" type="button" data-payment="websiteMonthly" aria-describedby="plan-web-mo">Subscribe <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-social-mo">Social Media Maintenance</h4>
-          <div class="price">$100<small>/mo</small></div>
-          <p class="price-note">+$350 one-time creation/setup</p>
-          <ul><li>Profile maintenance</li><li>Brand consistency</li><li>Ongoing support</li></ul>
-          <button class="btn ghost pay" type="button" data-payment="socialMonthly" aria-describedby="plan-social-mo">Subscribe <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-ads-mo">Advertising</h4>
-          <div class="price">$150<small>/mo</small></div>
-          <p class="price-note">Ad spend is separate</p>
-          <ul><li>Campaign management</li><li>Audience targeting</li><li>Performance monitoring</li></ul>
-          <button class="btn ghost pay" type="button" data-payment="adsMonthly" aria-describedby="plan-ads-mo">Subscribe <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-        <article class="card price-card featured" data-reveal>
-          <div class="popular">BEST VALUE</div>
-          <h4 id="plan-bundle-mo">Full WAVE Package</h4>
-          <div class="price">$350<small>/mo</small></div>
-          <p class="price-note">Website + social media + advertising</p>
-          <ul><li>Website support</li><li>Social media maintenance</li><li>Advertising management</li></ul>
-          <button class="btn primary pay" type="button" data-payment="bundleMonthly" aria-describedby="plan-bundle-mo">Get Full WAVE <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-      </div>
-
-      <div class="price-heading" data-reveal><h3>Yearly subscriptions</h3><span>Annual billing</span></div>
-      <div class="price-grid yearly">
-        <article class="card price-card" data-reveal>
-          <h4 id="plan-web-yr">Website Creation</h4>
-          <div class="price">$1,000<small>/yr</small></div>
-          <p class="price-note">Annual website service</p>
-          <ul><li>Custom website</li><li>Hosting and maintenance</li><li>Ongoing updates</li></ul>
-          <button class="btn ghost pay" type="button" data-payment="websiteYearly" aria-describedby="plan-web-yr">Choose Annual <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-        <article class="card price-card featured" data-reveal>
-          <div class="popular">SAVE $1,200/YEAR VS MONTHLY</div>
-          <h4 id="plan-bundle-yr">Full WAVE Package</h4>
-          <div class="price">$3,000<small>/yr</small></div>
-          <p class="price-note">Website + social + advertising</p>
-          <ul><li>Complete website support</li><li>Social media maintenance</li><li>Advertising management</li></ul>
-          <button class="btn primary pay" type="button" data-payment="bundleYearly" aria-describedby="plan-bundle-yr">Choose Annual <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
+      <div class="rates-compare" id="ratesCompare">
+        <div class="billing" role="group" aria-label="Billing period" data-reveal hidden>
+          <button type="button" class="billing-opt" data-billing="monthly" aria-pressed="true" aria-controls="ratesTable">Monthly</button>
+          <button type="button" class="billing-opt" data-billing="yearly" aria-pressed="false" aria-controls="ratesTable">Yearly</button>
+        </div>
+        <p class="scroll-hint" id="ratesHint" aria-hidden="true">Swipe to compare all four plans <svg viewBox="0 0 24 24" focusable="false"><path d="M4 12h15M13.5 6.5 19 12l-5.5 5.5"/></svg></p>
+        <div class="rates-scroll" id="ratesTable" tabindex="0" role="region" aria-labelledby="rates-caption" data-reveal>
+          <table class="rates-table">
+            <caption id="rates-caption" class="sr-only">Subscription plans compared: price and what each plan includes</caption>
+            <colgroup><col class="c-feat"><col><col><col><col class="col-f"></colgroup>
+            <thead>
+              <tr>
+                <td class="corner"></td>
+                <th scope="col">
+                  <h3 class="plan-name" id="plan-web-mo">Website Creation</h3>
+                  <p class="bill-mo plan-price">$100–$150<small>/mo</small><span class="plan-note">+$100 one-time signup fee</span></p>
+                  <p class="bill-yr plan-price" id="plan-web-yr">$1,000<small>/yr</small><span class="plan-note">Annual website service</span></p>
+                </th>
+                <th scope="col">
+                  <h3 class="plan-name" id="plan-social-mo">Social Media Maintenance</h3>
+                  <p class="bill-mo plan-price">$100<small>/mo</small><span class="plan-note">+$350 one-time creation/setup</span></p>
+                  <p class="yr-only plan-price plan-none">Monthly only</p>
+                </th>
+                <th scope="col">
+                  <h3 class="plan-name" id="plan-ads-mo">Advertising</h3>
+                  <p class="bill-mo plan-price">$150<small>/mo</small><span class="plan-note">Ad spend is separate</span></p>
+                  <p class="yr-only plan-price plan-none">Monthly only</p>
+                </th>
+                <th scope="col" class="col-f">
+                  <span class="tag">BEST VALUE</span>
+                  <h3 class="plan-name" id="plan-bundle-mo">Full WAVE Package</h3>
+                  <p class="bill-mo plan-price">$350<small>/mo</small><span class="plan-note">Website + social media + advertising</span></p>
+                  <p class="bill-yr plan-price" id="plan-bundle-yr">$3,000<small>/yr</small><span class="plan-note">Website + social + advertising</span><span class="tag tag-line">SAVE $1,200/YEAR VS MONTHLY</span></p>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="group"><th scope="rowgroup"><span class="bill-mo">Website support</span><span class="yr-only">Complete website support</span></th><td aria-hidden="true"></td><td aria-hidden="true"></td><td aria-hidden="true"></td><td class="col-f" aria-hidden="true"></td></tr>
+              <tr><th scope="row">Custom website</th><td><span class="yes"><span class="sr-only">Included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+              <tr><th scope="row">Hosting &amp; maintenance</th><td><span class="yes"><span class="sr-only">Included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+              <tr><th scope="row">Ongoing updates</th><td><span class="yes"><span class="sr-only">Included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+            </tbody>
+            <tbody>
+              <tr class="group"><th scope="rowgroup">Social media maintenance</th><td aria-hidden="true"></td><td aria-hidden="true"></td><td aria-hidden="true"></td><td class="col-f" aria-hidden="true"></td></tr>
+              <tr><th scope="row">Profile maintenance</th><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="yes"><span class="sr-only">Included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+              <tr><th scope="row">Brand consistency</th><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="yes"><span class="sr-only">Included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+              <tr><th scope="row">Ongoing support</th><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="yes"><span class="sr-only">Included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+            </tbody>
+            <tbody>
+              <tr class="group"><th scope="rowgroup">Advertising management</th><td aria-hidden="true"></td><td aria-hidden="true"></td><td aria-hidden="true"></td><td class="col-f" aria-hidden="true"></td></tr>
+              <tr><th scope="row">Campaign management</th><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="yes"><span class="sr-only">Included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+              <tr><th scope="row">Audience targeting</th><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="yes"><span class="sr-only">Included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+              <tr><th scope="row">Performance monitoring</th><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="no"><span class="sr-only">Not included</span></span></td><td><span class="yes"><span class="sr-only">Included</span></span></td><td class="col-f"><span class="yes"><span class="sr-only">Included</span></span></td></tr>
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="corner"></td>
+                <td>
+                  <button class="btn ghost pay bill-mo" type="button" data-payment="websiteMonthly" aria-describedby="plan-web-mo">Subscribe <span class="i-ext" aria-hidden="true"></span></button>
+                  <button class="btn ghost pay bill-yr" type="button" data-payment="websiteYearly" aria-describedby="plan-web-mo plan-web-yr">Choose Annual <span class="i-ext" aria-hidden="true"></span></button>
+                </td>
+                <td><button class="btn ghost pay bill-mo" type="button" data-payment="socialMonthly" aria-describedby="plan-social-mo">Subscribe <span class="i-ext" aria-hidden="true"></span></button></td>
+                <td><button class="btn ghost pay bill-mo" type="button" data-payment="adsMonthly" aria-describedby="plan-ads-mo">Subscribe <span class="i-ext" aria-hidden="true"></span></button></td>
+                <td class="col-f">
+                  <button class="btn primary pay bill-mo" type="button" data-payment="bundleMonthly" aria-describedby="plan-bundle-mo">Get Full WAVE <span class="i-ext" aria-hidden="true"></span></button>
+                  <button class="btn primary pay bill-yr" type="button" data-payment="bundleYearly" aria-describedby="plan-bundle-mo plan-bundle-yr">Choose Annual <span class="i-ext" aria-hidden="true"></span></button>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       </div>
 
       <div class="price-heading" data-reveal><h3>One-time services</h3><span>One payment</span></div>
-      <div class="price-grid onetime">
-        <article class="card price-card" data-reveal>
+      <ul class="onetime" data-reveal>
+        <li class="onetime-item">
           <h4 id="plan-signup">Website Signup</h4>
-          <div class="price">$100</div>
-          <p class="price-note">Onboarding and setup fee</p>
+          <p class="onetime-note">Onboarding and setup fee</p>
+          <p class="onetime-price">$100</p>
           <button class="btn ghost pay" type="button" data-payment="websiteSignup" aria-describedby="plan-signup">Pay Signup Fee <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-        <article class="card price-card" data-reveal>
+        </li>
+        <li class="onetime-item">
           <h4 id="plan-social-setup">Social Media Creation</h4>
-          <div class="price">$350</div>
-          <p class="price-note">Profile setup and initial branding</p>
+          <p class="onetime-note">Profile setup and initial branding</p>
+          <p class="onetime-price">$350</p>
           <button class="btn ghost pay" type="button" data-payment="socialSetup" aria-describedby="plan-social-setup">Pay Setup Fee <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-        <article class="card price-card" data-reveal>
+        </li>
+        <li class="onetime-item">
           <h4 id="plan-logo">Logo / Rebranding</h4>
-          <div class="price">$250</div>
-          <p class="price-note">Custom logo or brand refresh</p>
+          <p class="onetime-note">Custom logo or brand refresh</p>
+          <p class="onetime-price">$250</p>
           <button class="btn ghost pay" type="button" data-payment="logo" aria-describedby="plan-logo">Purchase <span class="i-ext" aria-hidden="true"></span></button>
-        </article>
-      </div>
+        </li>
+      </ul>
       <p class="fine">Prices are in USD. Monthly website price depends on scope. Confirm deliverables and any setup fees before purchase. Advertising media budgets are billed separately. Payments are processed securely by Stripe.</p>
     </div>
   </section>
