@@ -32,11 +32,20 @@
  *
  * Cost: nothing is drawn while the page scrolls (the last frame slides away with
  * the hero; the water carries on ~150 ms after the scroll stops), nor while the
- * hero is off screen or the tab hidden. Tiers: 'full' on a GPU (the smooth sky
- * shaded at half resolution); 'lite' when WebGL is software-rendered (SwiftShader,
- * llvmpipe, WARP...) or missing - a small buffer at ~20 fps, simpler shading,
- * fewer particles. At rest, frames over budget step the cost down within ~1-2 s
- * (full: the buffer; lite: ~15 fps, then the buffer) and back up when there is room.
+ * hero is off screen or the tab hidden - so what it costs at rest never touches
+ * scrolling, and it trades frame rate, never sharpness, for that cost:
+ *  - 'full' (a GPU): the screen's own pixels up to DPR 2 (5.6 Mpx; 1.9 Mpx on
+ *    phones) at up to 60 fps. Frames over budget at rest step the frame rate
+ *    down first (60 -> 45 -> 30 -> 24 fps); only then the buffer, 15% a step,
+ *    never below 1 buffer px per CSS px. A steady 30 Hz (Chrome's Energy Saver)
+ *    or other display rate is recognised as the refresh, not as overload. Only
+ *    the smooth sky (gradient, haze, halo) is shaded at half resolution and
+ *    blitted with a full-resolution dither: indistinguishable from full.
+ *  - 'lite' (WebGL drawn in software - SwiftShader, llvmpipe, WARP... - or no
+ *    WebGL at all): 1 buffer px per CSS px (min 0.75) at a lower frame rate
+ *    (24 -> 20 -> 15 -> 12 fps), simpler shading, fewer particles.
+ * Add ?wave=info to the page URL for a small readout of the renderer, GPU,
+ * buffer and frame rate this browser uses.
  * ---------------------------------------------------------------------------
  */
 (function () {
@@ -281,8 +290,14 @@
     'void main(){',
     '  float d = v0.x; float room = v0.y; float g = v0.z; float u = v0.w;',
     '  float fw = uFw; float depth = v4.a; float seed = depth * 7.3 + 0.5;',
-    // coverage: anti-aliased crest edge, thin translucent gap line above it, lip inner edge
-    '  float body = smoothstep(-fw * 0.5, fw * 0.5, d);',
+    // coverage: anti-aliased crest edge, thin translucent gap line above it, lip inner edge.
+    // Below the crest d is the vertical distance, so on a sloped crest one buffer pixel across the edge spans
+    // more than fw of d: with derivatives the edge ramp is exactly one buffer pixel wide at any slope.
+    '  float aw = fw;',
+    '#ifdef DERIV',
+    '  aw = clamp(length(vec2(dFdx(d), dFdy(d))), fw * 0.5, fw * 4.0);',
+    '#endif',
+    '  float body = smoothstep(-aw * 0.5, aw * 0.5, d);',
     '  float line = smoothstep(-g - fw * 0.75, -g + fw * 0.25, d) * (1.0 - body);',
     '  float alpha = v5.w * (1.0 - v3.a * smoothstep(room - fw * 1.5, room, d));',
     '  float dd = max(d, 0.0);',
@@ -438,8 +453,8 @@
 
   function createGLRenderer(canvas, forcedTier) {
     var gl = null, caveat = false;
-    // No MSAA: every edge is smoothed in the shaders over one device pixel (uFw). Ask for a context that is
-    // not software-rendered first; when the browser refuses it, take the software one and run the lite tier.
+    // No MSAA: every edge is smoothed in the shaders over one buffer pixel (uFw, or the derivatives). Ask for a
+    // context that is not software-rendered first; when the browser refuses it, take the software one (lite tier).
     var attrs = { alpha: false, antialias: false, depth: false, stencil: false, premultipliedAlpha: true, preserveDrawingBuffer: false, failIfMajorPerformanceCaveat: true };
     try {
       gl = canvas.getContext('webgl', attrs) || canvas.getContext('experimental-webgl', attrs);
@@ -460,8 +475,11 @@
       var hp = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
       if (hp && hp.precision > 0) prec = 'highp';
     } catch (e) { /* keep mediump */ }
+    // screen-space derivatives (near-universal in WebGL 1) size the crest's anti-aliasing exactly
+    var deriv = false;
+    try { deriv = !!gl.getExtension('OES_standard_derivatives'); } catch (e) { deriv = false; }
 
-    var R = { kind: 'gl', canvas: canvas, ok: false, failed: false, soft: soft, lite: lite, gpu: gpuName };
+    var R = { kind: 'gl', canvas: canvas, ok: false, failed: false, soft: soft, lite: lite, gpu: gpuName, deriv: deriv, caveat: caveat };
     var P = {}, buf = {}, maxAttr = 0, halfSky = false;
     var wv = null, wvBands = null, skyV = null, skyU = null, scrimV = new Float32Array(24), fxv = null, fxQuadsMax = 0, fxn = 0, fxViews = [];
 
@@ -476,7 +494,9 @@
     }
     function prog(vs, fs, attribs, defs) {
       var p = gl.createProgram(), head = 'precision ' + prec + ' float;\n' + (lite ? '#define LITE 1\n' : '') + (defs || '');
-      var vsh = sh(gl.VERTEX_SHADER, head + vs), fsh = sh(gl.FRAGMENT_SHADER, head + fs);
+      // (#extension must precede every other token; it is only ever enabled in fragment shaders)
+      var fsHead = deriv ? '#extension GL_OES_standard_derivatives : enable\n#define DERIV 1\n' : '';
+      var vsh = sh(gl.VERTEX_SHADER, head + vs), fsh = sh(gl.FRAGMENT_SHADER, fsHead + head + fs);
       gl.attachShader(p, vsh);
       gl.attachShader(p, fsh);
       for (var i = 0; i < attribs.length; i++) gl.bindAttribLocation(p, i, attribs[i]);
@@ -622,8 +642,10 @@
     R.draw = function (sc) {
       if (!R.ok || gl.isContextLost()) return;
       var N = sc.N, S = sc.S, LS = sc.LS, j, b;
+      // the drawing buffer as the browser actually made it (it may clamp a very large canvas)
+      var vw = gl.drawingBufferWidth || sc.pw, vh = gl.drawingBufferHeight || sc.ph;
       ensureIndices(N, S, LS);
-      gl.viewport(0, 0, sc.pw, sc.ph);
+      gl.viewport(0, 0, vw, vh);
       var xs = sc.xs, fwp = sc.fw, ext = sc.rimExt;
 
       /* sky, rasterised only from the top edge down to just below the water's top: the bands' bodies are
@@ -644,7 +666,7 @@
       var u = P.sky.u;
       if (halfSky) {
         // the whole sky at half resolution into its texture ...
-        var tw = (sc.pw + 1) >> 1, th = (sc.ph + 1) >> 1;
+        var tw = (vw + 1) >> 1, th = (vh + 1) >> 1;
         gl.bindFramebuffer(gl.FRAMEBUFFER, buf.skyFb);
         if (buf.tw !== tw || buf.th !== th) {
           gl.activeTexture(gl.TEXTURE1);
@@ -662,7 +684,7 @@
         gl.bindBuffer(gl.ARRAY_BUFFER, buf.sky);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, sv);
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
-        gl.uniform2f(u.uView, sc.pw, sc.ph);
+        gl.uniform2f(u.uView, vw, vh);
       }
       gl.uniform2f(u.uRes, sc.W, sc.H);
       gl.uniform4fv(u.uHalo, sc.halo);
@@ -674,13 +696,13 @@
         gl.drawArrays(gl.TRIANGLES, 0, 3);
         // ... then blitted into the strip above the water at full resolution
         gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-        gl.viewport(0, 0, sc.pw, sc.ph);
+        gl.viewport(0, 0, vw, vh);
         use(P.blit);
         gl.bindBuffer(gl.ARRAY_BUFFER, buf.sky);
         gl.bufferSubData(gl.ARRAY_BUFFER, 0, sv);
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
         gl.uniform2f(P.blit.u.uRes, sc.W, sc.H);
-        gl.uniform2f(P.blit.u.uView, sc.pw, sc.ph);
+        gl.uniform2f(P.blit.u.uView, vw, vh);
       }
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, S * 2);
 
@@ -733,7 +755,7 @@
       gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
       u = P.water.u;
       gl.uniform2f(u.uRes, sc.W, sc.H);
-      gl.uniform2f(u.uView, sc.pw, sc.ph);
+      gl.uniform2f(u.uView, vw, vh);
       gl.uniform4fv(u.uTop, sc.pal.top);
       gl.uniform4fv(u.uMid, sc.pal.mid);
       gl.uniform4fv(u.uDeep, sc.pal.deep);
@@ -762,7 +784,7 @@
       fxn = 0;
       var Pp = sc.P, i, a, k, s, x0, y0;
       // lite (coarse buffer): a sprite is never smaller than about one buffer pixel, with the same total light
-      var fxMin = lite ? sc.W / sc.pw : 0, gMin = fxMin * 4;
+      var fxMin = lite ? sc.W / vw : 0, gMin = fxMin * 4;
       for (i = 0; i < Pp.n; i++) {
         a = Pp.a[i];
         if (a < 0.004) continue;
@@ -803,7 +825,7 @@
         gl.vertexAttribPointer(2, 4, gl.FLOAT, false, 40, 24);
         u = P.fx.u;
         gl.uniform2f(u.uRes, sc.W, sc.H);
-        gl.uniform2f(u.uView, sc.pw, sc.ph);
+        gl.uniform2f(u.uView, vw, vh);
         scrimUniforms(u, sc);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf.fi);
         gl.drawElements(gl.TRIANGLES, fxn * 6, gl.UNSIGNED_SHORT, 0);
@@ -822,7 +844,7 @@
         gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
         u = P.scrim.u;
         gl.uniform2f(u.uRes, sc.W, sc.H);
-        gl.uniform2f(u.uView, sc.pw, sc.ph);
+        gl.uniform2f(u.uView, vw, vh);
         scrimUniforms(u, sc);
         gl.drawArrays(gl.TRIANGLES, 0, n6);
       }
@@ -1098,8 +1120,10 @@
     // software-rendered, or missing altogether (in a current browser that almost always means no usable GPU,
     // and the 2D fallback would then rasterise on the CPU too).
     var lite = forcedTier === 'lite';
+    var glSeen = null;                        // what WebGL reported (for the ?wave=info readout)
     if (opts.renderer !== '2d') {
       glR = createGLRenderer(canvas, forcedTier);
+      glSeen = glR ? { gpu: glR.gpu, soft: glR.soft, caveat: glR.caveat, failed: glR.failed } : { gpu: '', none: true };
       if (glR) lite = glR.lite;
       else if (!forcedTier) lite = true;
       if (glR && glR.failed) {
@@ -1136,11 +1160,18 @@
     var broke = false;
     var dirty = true, bufDirty = true, baseMoving = false;
     var raf = 0, lastTs = 0, visible = true, debugPaused = false;
-    var lastDrawTs = 0, drawn = 0;                // frame governor (see frame())
+    var drawn = 0;                                // frames drawn (stats, ?wave=info)
     var frozen = false, freezeTimer = 0, quietAt = 0, freezes = 0, thawAt = 0;   // scroll freeze (see onScrollish())
-    var perf = { acc: 0, n: 0, last: 0, warm: 0, over: 0, up: 0, upAt: -1e9, lock: false, steps: 0 };
+    var perf = { acc: 0, n: 0, last: 0, warm: 0, over: 0, up: 0, upAt: -1e9, lock: false, pin: false, steps: 0 };
     var d0 = 1;                                   // buffer scale before the adaptive factor (dprScale)
-    var liteSlow = false;                         // lite tier over budget: ~15 fps instead of ~20 (see judge())
+    var resFloor = 1;                             // lowest dprScale the adaptive step may take (computeBuffer())
+    var pinD = 0;                                 // debug mounts only: a pinned buffer density (_debug.pin)
+    var liteMin = 0.75;                           // lite: lowest buffer px per CSS px (0.5 in an emergency, judge())
+    // frame-rate ladder (see judge()): the frame rate steps down before the resolution does
+    var FPS = lite ? [24, 20, 15, 12] : [60, 45, 30, 24], fpsI = 0;
+    var dueTs = 0;                                // when the next frame is due (frame governor)
+    var rafPrev = 0, ivs = new Float32Array(64), ivTmp = new Float32Array(64), ivN = 0;   // rAF intervals (ms)
+    var refIv = 1000 / 60;                        // the browser's frame interval: display refresh or its cap
     var lip = {
       active: false, alpha: 1, g: 1.5, x: new Float32Array(LS), y: new Float32Array(LS), nx: new Float32Array(LS),
       ny: new Float32Array(LS), w: new Float32Array(LS), u: new Float32Array(LS), foam: new Float32Array(LS)
@@ -1226,16 +1257,35 @@
       bufDirty = true;
     }
 
+    // Resolution policy, in drawing-buffer pixels per CSS pixel (d). The cost of a sharp frame is paid in
+    // frame rate (judge()), so the buffer is the screen's own pixels wherever that is affordable at all:
+    //   full: the device ratio up to 2, within 5.6 Mpx (1.9 Mpx on phones) - a 1920x1080 @1.25 or a
+    //         1440x900 @2 laptop is native. The budget never takes d below 1; only beyond 8.3 Mpx at d = 1
+    //         (larger than a 4K screen) is d lowered, as a last resort.
+    //   lite (software rendering): d = 1 within LITE_PX (CSS upscales by the device ratio), never below 0.75.
+    // The adaptive step (dprScale) may then lower d to 1 (full) / 0.75 (lite), 0.8x that on very large screens.
+    var LITE_PX = [0.5e6, 1.3e6];                 // lite budget: phones, larger screens
     function computeBuffer() {
-      var dev = window.devicePixelRatio || 1;
+      var dev = window.devicePixelRatio || 1, A = W * H, phone = W < 700;
       var is2d = R && R.kind === '2d';
-      // max drawing-buffer pixels (2D rasterises on the CPU; lite = no GPU at all, CSS upscales the buffer)
-      var d = Math.min(dev, lite || is2d ? 1 : 1.5);
-      var budget = lite ? (is2d ? (W < 700 ? 0.06e6 : 0.12e6) : (W < 700 ? 0.08e6 : 0.16e6))
-        : (is2d ? (W < 700 ? 0.5e6 : 0.8e6) : (W < 700 ? 1.1e6 : 2.2e6));
-      if (W * H * d * d > budget) d = Math.sqrt(budget / (W * H));
+      var big = A > 3.5e6;                        // a hero beyond ~2560x1370 CSS px: the floors give a little
+      var d, minD, budget;
+      if (lite) {
+        minD = (big ? 0.8 : 1) * liteMin;
+        budget = LITE_PX[phone ? 0 : 1];
+        d = Math.min(dev, 1);
+        if (A * d * d > budget) d = Math.max(Math.sqrt(budget / A), Math.min(d, minD));
+      } else {
+        minD = big ? 0.8 : 1;
+        // 2D on a GPU (only when WebGL broke) rasterises paths and gradients: a little more modest
+        budget = is2d ? (phone ? 1.2e6 : 3.3e6) : (phone ? 1.9e6 : 5.6e6);
+        d = Math.min(dev, 2);
+        if (A * d * d > budget) d = Math.max(Math.sqrt(budget / A), Math.min(d, 1));
+        if (A * d * d > 8.3e6) d = Math.sqrt(8.3e6 / A);
+      }
       d0 = d;
-      d = Math.max(lite ? 0.2 : 0.5, d * dprScale);
+      resFloor = d0 > minD ? minD / d0 : 1;
+      d = pinD > 0 ? pinD : d0 * Math.max(resFloor, Math.min(1, dprScale));
       dpr = d;
       pw = Math.max(1, Math.round(W * d)); ph = Math.max(1, Math.round(H * d));
       bufDirty = false;
@@ -1245,7 +1295,7 @@
       if (bufDirty) computeBuffer();
       if (target.width !== pw) target.width = pw;
       if (target.height !== ph) target.height = ph;
-      scene.pw = pw; scene.ph = ph; scene.fw = (lite ? 1.5 : 1) / dpr;   // edge anti-aliasing width, CSS px
+      scene.pw = pw; scene.ph = ph; scene.fw = 1 / dpr;   // edge anti-aliasing width: one buffer pixel, in CSS px
     }
 
     function makeBand(b) {
@@ -1266,8 +1316,9 @@
       s = clamp(Math.min(W / 1440, H / 850) * 0.5 + 0.5, 0.62, 1.2);
       if (mobile) s = clamp(W / 600, 0.55, 0.8);
       var nN = mobile ? 4 : 5;
-      // crest sample spacing (CSS px): lite halves the geometry - its coarse buffer could not show the finer step
-      var nsx = Math.max(lite ? 12 : (mobile ? 4 : 6), (W + 2 * pad) / (lite ? 280 : 560));
+      // crest sample spacing (CSS px): every tier draws at ~1 buffer px per CSS px or more, so all get the
+      // same smooth crests (the geometry is a few thousand vertices: nothing next to the pixels)
+      var nsx = Math.max(mobile ? 4 : 6, (W + 2 * pad) / 560);
       var nS = Math.ceil((W + 2 * pad) / nsx) + 1;
       var ndx = mobile ? 9 : 12;
       var nM = Math.ceil((W + 2 * pad) / ndx) + 2;
@@ -2016,40 +2067,58 @@
 
     function running() { return !destroyed && !!R && !reduced && visible && !doc.hidden && !debugPaused; }
 
-    // Adaptive cost, judged at rest on the real frame interval in half-second windows (never while
-    // scrolling: nothing is drawn then): two windows over budget in a row (~1 s) take one step down; ~6 s
-    // comfortably within budget take one step back up - unless that step up led straight back over budget
-    // (a step down within ~5 s of it), in which case it stays down (hysteresis: no see-sawing).
-    // Full tier (GPU-bound): the buffer, 15% a step. Lite (software rendering, where compositing each new
-    // frame of the page costs as much as drawing it): 20 -> 15 fps first, then one buffer step at most.
+    // Adaptive cost, judged at rest in half-second windows (never while scrolling: nothing is drawn then).
+    // The browser's own frame rate is told apart from overload first: when the rAF intervals of a window are
+    // steady (80% within 20% of their median) at a display rate (<= 21 ms, 48 Hz and up) or at ~33.3 ms (a 30 Hz
+    // cap such as Chrome's Energy Saver on battery), that is the refresh, and frames are only expected that
+    // often. Two windows in a row (~1 s) whose frames come more than 25% later than expected take one step
+    // down: the frame rate first (full: 60 -> 45 -> 30 -> 24 fps; lite: 24 -> 20 -> 15 -> 12), then the buffer,
+    // 15% a step, down to the floor computeBuffer() allows. ~6 s with no late frame at all take one step back
+    // up (the buffer first, then the frame rate) - unless that step up led straight back over budget (a step
+    // down within ~5 s of it): then it stays down (hysteresis: no see-sawing).
+    function median(n) {
+      var a = ivTmp.subarray(0, n);
+      a.set(ivs.subarray(0, n)); a.sort();
+      return n % 2 ? a[(n - 1) >> 1] : 0.5 * (a[n / 2 - 1] + a[n / 2]);
+    }
     function judge(dt, ts) {
       perf.last = Math.round(dt * 1000);
       // skip the first frames after a (re)start or a change of step, and the page's own loading
-      if (++perf.warm <= 4 || doc.readyState !== 'complete') return;
+      if (++perf.warm <= 4 || doc.readyState !== 'complete') { ivN = 0; return; }
       perf.acc += dt; perf.n++;
       if (perf.acc < 0.5 || perf.n < 3) return;
-      var avg = perf.acc / perf.n, win = perf.acc, goal = lite ? (liteSlow ? 1 / 15 : 0.05) : 1 / 60;
-      var floor = lite ? 0.85 : (d0 > 1.01 ? 0.62 : 0.8);
-      perf.acc = 0; perf.n = 0;
-      if (avg > goal * 1.33) {
+      var avg = perf.acc / perf.n * 1000, win = perf.acc, n = ivN, i, m, near = 0, late = 0;
+      perf.acc = 0; perf.n = 0; ivN = 0;
+      if (n >= 3) {
+        m = median(n);
+        for (i = 0; i < n; i++) if (Math.abs(ivs[i] - m) < 0.2 * m) near++;
+        if (near >= 0.8 * n && (m <= 21 || Math.abs(m - 33.3) < 2.7)) refIv = m;
+        for (i = 0; i < n; i++) if (ivs[i] > 1.5 * refIv) late++;
+      }
+      if (perf.pin) return;
+      var expect = Math.max(1000 / FPS[fpsI], refIv);
+      if (avg > expect * 1.25) {
         perf.up = 0;
         if (++perf.over >= 2) {
           perf.over = 0;
-          var canDown = (lite && !liteSlow) || dprScale > floor + 1e-3;
+          var canDown = fpsI < FPS.length - 1 || dprScale > resFloor + 1e-3;
+          // a machine too slow for the lite tier even at its lowest step (under ~6 fps): the floor gives way
+          // rather than keep the browser's software renderer busy
+          if (!canDown && lite && liteMin > 0.5 && avg > expect * 2) { liteMin = 0.5; computeBuffer(); canDown = dprScale > resFloor + 1e-3; }
           if (canDown) {
             if (ts - perf.upAt < 5000) perf.lock = true;
-            if (lite && !liteSlow) liteSlow = true;
-            else { dprScale = Math.max(floor, dprScale * 0.85); bufDirty = true; }
+            if (fpsI < FPS.length - 1) fpsI++;
+            else { dprScale = Math.max(resFloor, Math.min(1, dprScale) * 0.85); bufDirty = true; }
             perf.warm = 0; perf.steps++;
           }
         }
       } else {
         perf.over = 0;
-        if (avg < goal * 1.1 && (dprScale < 1 || liteSlow) && !perf.lock) {
+        if (avg < expect * 1.1 && late <= n * 0.1 && (dprScale < 1 || fpsI > 0) && !perf.lock) {
           perf.up += win;
           if (perf.up >= 6) {
             perf.up = 0; perf.upAt = ts; perf.warm = 0; perf.steps++;
-            if (dprScale < 1) { dprScale = Math.min(1, dprScale / 0.85); bufDirty = true; } else liteSlow = false;
+            if (dprScale < 1) { dprScale = Math.min(1, dprScale / 0.85); if (dprScale > 0.99) dprScale = 1; bufDirty = true; } else fpsI--;
           }
         } else perf.up = 0;
       }
@@ -2058,14 +2127,19 @@
     function frame(ts) {
       raf = 0;
       if (frozen || !running()) { lastTs = 0; return; }
-      // Frame governor: the display rate, capped at ~95 fps on high-refresh screens; ~20 fps in the lite
-      // tier (~15 when it is over budget, see judge()). dt spans skipped frames, so the motion speed never changes.
-      if (lastDrawTs && ts - lastDrawTs < (lite ? (liteSlow ? 63 : 47) : 10.5)) { raf = requestAnimationFrame(frame); return; }
-      lastDrawTs = ts;
+      if (rafPrev && ivN < 64) ivs[ivN++] = ts - rafPrev;
+      rafPrev = ts;
+      // Frame governor: frames are spaced 1 / FPS[fpsI] apart on average, at whatever rate the browser runs
+      // rAF (a callback within ~half a refresh of the due time draws; the due time advances by whole frame
+      // intervals, so 45 fps on a 60 Hz screen is a steady 2-1-1 vsync rhythm). dt spans the skipped
+      // callbacks, so the motion speed never changes.
+      var iv = 1000 / FPS[fpsI];
+      if (dueTs && ts < dueTs - 0.45 * Math.min(refIv, iv)) { raf = requestAnimationFrame(frame); return; }
+      dueTs = dueTs && ts - dueTs < iv ? dueTs + iv : ts + iv;
       var now = ts / 1000;
       // the first frame after a (re)start takes one nominal step: a resume never jumps ahead or repeats a frame
       var measured = lastTs > 0;
-      var dt = measured ? Math.min(Math.max(now - lastTs, 0), 0.25) : (lite ? (liteSlow ? 1 / 15 : 0.05) : 1 / 60);
+      var dt = measured ? Math.min(Math.max(now - lastTs, 0), 0.25) : 1 / FPS[fpsI];
       lastTs = now;
       try {
         if (dirty) { measure(); layout(); }
@@ -2080,11 +2154,11 @@
     }
     function kick() {
       if (!raf && !frozen && running()) {
-        lastTs = 0; lastDrawTs = 0; perf.warm = 0; perf.acc = 0; perf.n = 0;
+        lastTs = 0; dueTs = 0; rafPrev = 0; ivN = 0; perf.warm = 0; perf.acc = 0; perf.n = 0;
         raf = requestAnimationFrame(frame);
       }
     }
-    function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; lastTs = 0; lastDrawTs = 0; }
+    function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; lastTs = 0; dueTs = 0; rafPrev = 0; ivN = 0; }
 
     // Scroll freeze: while the page scrolls nothing is drawn (no WebGL, no logo style writes), so the
     // compositor and the GPU have the scroll to themselves. The hero is sliding away and its last frame just
@@ -2275,8 +2349,54 @@
       if (R && R.kind === 'gl') to2D(true); else toStatic();
     }
 
+    /* ---- ?wave=info: a small fixed readout of what this browser runs, for support; nothing otherwise ---- */
+    var info = null, infoTimer = 0, infoDrawn = 0, infoAt = 0;
+    function infoText() {
+      var now = performance.now(), dev = window.devicePixelRatio || 1;
+      var fps = infoAt && now > infoAt ? (drawn - infoDrawn) * 1000 / (now - infoAt) : 0;
+      infoDrawn = drawn; infoAt = now;
+      var kind = !R ? 'static backdrop' : R.kind === 'gl' ? 'WebGL' : 'Canvas 2D';
+      var gpu = !glSeen ? 'not asked (2D renderer requested)'
+        : glSeen.none ? 'WebGL unavailable - hardware acceleration is probably off'
+        : (glSeen.gpu || 'unknown') + (glSeen.soft ? '  [software rendering: no GPU]' : '') + (glSeen.failed ? '  [shaders failed]' : '');
+      var state = destroyed ? 'stopped' : reduced ? 'still frame (reduced motion or paused)' : frozen ? 'paused while the page scrolls'
+        : !visible ? 'paused (off screen)' : doc.hidden ? 'paused (tab hidden)' : raf ? 'running' : 'idle';
+      return [
+        'WAVE hero - ?wave=info',
+        'tier     ' + (lite ? 'lite' : 'full') + ', ' + kind,
+        'GPU      ' + gpu,
+        'screen   DPR ' + +dev.toFixed(3) + ', hero ' + Math.round(W) + ' x ' + Math.round(H) + ' CSS px',
+        'buffer   ' + pw + ' x ' + ph + ' px = ' + dpr.toFixed(2) + ' px per CSS px (the screen: ' + +dev.toFixed(3) + ')',
+        'frames   cap ' + FPS[fpsI] + ' fps, drawing ' + Math.round(fps) + ' fps, browser frames ~' + Math.round(1000 / refIv) + ' Hz',
+        'state    ' + state
+      ].join('\n');
+    }
+    function showInfo() {
+      try {
+        if (!/[?&]wave=info(?:&|$)/.test(window.location.search)) return;
+        var old = doc.getElementById('wave-info');
+        if (old && old.parentNode) old.parentNode.removeChild(old);
+        info = doc.createElement('div');
+        info.id = 'wave-info';
+        info.style.cssText = 'position:fixed;left:8px;bottom:8px;z-index:2147483000;box-sizing:border-box;max-width:calc(100vw - 16px);' +
+          'margin:0;padding:8px 10px;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#e8f6ff;' +
+          'background:#030d19;border:1px solid #2b6a86;border-radius:6px;white-space:pre-wrap;overflow-wrap:anywhere;' +
+          'text-align:left;pointer-events:auto;user-select:text;-webkit-user-select:text';
+        info.textContent = infoText();
+        doc.body.appendChild(info);
+        infoTimer = setInterval(function () { if (info) info.textContent = infoText(); }, 1000);
+      } catch (e) { hideInfo(); }
+    }
+    function hideInfo() {
+      if (infoTimer) { clearInterval(infoTimer); infoTimer = 0; }
+      if (info && info.parentNode) info.parentNode.removeChild(info);
+      info = null;
+    }
+    showInfo();
+
     function cleanup() {
       destroyed = true;
+      hideInfo();
       stop();
       if (freezeTimer) { clearTimeout(freezeTimer); freezeTimer = 0; }
       while (timers.length) clearTimeout(timers.pop());
@@ -2307,7 +2427,8 @@
         return {
           renderer: R ? R.kind : 'static', sibling: !!sibling, held: held, introT: +introT.toFixed(2), t: +t.toFixed(2), dpr: +dpr.toFixed(3),
           tier: lite ? 'lite' : 'full', halfSky: !!(R && R.halfSky), gpu: glR ? glR.gpu : '', softGL: glR ? glR.soft : null, frozen: frozen, freezes: freezes, drawn: drawn, lastScrollAt: quietAt - FREEZE_MS, thawAt: thawAt,
-          dprScale: +dprScale.toFixed(3), scaleSteps: perf.steps, scaleLocked: perf.lock, fpsCap: lite ? (liteSlow ? 15 : 20) : 95,
+          dprScale: +dprScale.toFixed(3), scaleSteps: perf.steps, scaleLocked: perf.lock, fpsCap: FPS[fpsI], fpsLadder: FPS.slice(),
+          refreshMs: +refIv.toFixed(2), resFloor: +resFloor.toFixed(3), deriv: !!(glR && glR.deriv), css: [+W.toFixed(1), +H.toFixed(1)],
           buffer: [pw, ph], running: !!raf, frameMs: perf.last, particles: P.n, drops: kinds[K_DROP], mists: kinds[K_MIST],
           rings: kinds[K_RING], bio: kinds[K_BIO], beads: kinds[K_BEAD], bands: N, broke: broke,
           surge: surge ? +(introT - surge.t0).toFixed(2) : null, nextSet: +nextSet.toFixed(2), nextWind: +nextWind.toFixed(2),
@@ -2331,6 +2452,12 @@
         fail: function () { fail(); },
         time: function (T) { t = +T || 0; },
         scale: function (f) { dprScale = clamp(+f || 1, 0.2, 1); perf.lock = true; bufDirty = true; },   // pin the buffer scale
+        // pin the frame rate and/or the buffer density (buffer px per CSS px) and stop the adaptive steps
+        pin: function (fps, density, adaptive) {
+          perf.pin = !adaptive;
+          if (fps > 0) { FPS = [+fps]; fpsI = 0; }
+          if (density > 0) { pinD = +density; bufDirty = true; }
+        },
         freeze: function () { onScrollish(); },
         probe: function (x) {
           var FB = bands[N - 1];

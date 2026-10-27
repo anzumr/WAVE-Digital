@@ -11,9 +11,9 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap"></noscript>
-<link rel="preload" as="image" type="image/webp" imagesrcset="wave-logo-420.webp 420w, wave-logo.webp 752w" imagesizes="(max-width:760px) 180px, 232px">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&amp;display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400..800&amp;display=swap"></noscript>
+<link rel="preload" as="image" type="image/webp" imagesrcset="wave-logo-clean-420.webp 420w, wave-logo-clean-752.webp 752w" imagesizes="(max-width:760px) 180px, 232px">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body class="thanks-page">
@@ -34,16 +34,16 @@
   <section class="thanks" aria-labelledby="thanks-title">
     <div class="wrap thanks-inner">
       <div class="thanks-art" aria-hidden="true">
-        <picture><source type="image/webp" srcset="wave-logo-420.webp 420w, wave-logo.webp 752w" sizes="(max-width:760px) 180px, 232px"><img src="wave-logo.png" alt="" width="752" height="668" draggable="false"></picture>
+        <picture><source type="image/webp" srcset="wave-logo-clean-420.webp 420w, wave-logo-clean-752.webp 752w" sizes="(max-width:760px) 180px, 232px"><img src="wave-logo.png" alt="" width="752" height="668" draggable="false"></picture>
         <span class="thanks-check"><svg viewBox="0 0 24 24" focusable="false"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
       </div>
-      <p class="eyebrow">PAYMENT RECEIVED</p>
+      <p class="thanks-status">Payment received</p>
       <h1 id="thanks-title">Thank you — <br><em>you're all set.</em></h1>
       <p class="thanks-lead">Your payment went through and Stripe will email your receipt. <br class="br-wide">We'll be in touch to get your project started.</p>
       <div class="actions">
         <a class="btn primary" href="index.html">Back to WAVE Digital</a>
-        <a id="scheduleLink" class="btn schedule" href="index.html#contact"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9.5 15l2 2 3.5-3.5"/></svg><span class="btn-text">Schedule a Free Consultation <span aria-hidden="true">↗</span></span></a>
-        <a class="btn ghost" data-portal-link hidden>Manage subscription <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+        <a id="scheduleLink" class="btn schedule" href="index.html#contact"><svg class="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9.5 15l2 2 3.5-3.5"/></svg><span class="btn-text">Schedule a Free Consultation <span class="i-ext" aria-hidden="true"></span></span></a>
+        <a class="btn ghost" data-portal-link hidden>Manage subscription <span class="i-ext" aria-hidden="true"></span><span class="sr-only"> (opens in a new tab)</span></a>
       </div>
     </div>
   </section>
@@ -63,7 +63,7 @@
       <a href="index.html#services">Services</a>
       <a href="index.html#rates">Rates</a>
       <a href="index.html#contact">Contact</a>
-      <a class="portal-link" data-portal-link hidden>Manage subscription <span aria-hidden="true">↗</span><span class="sr-only"> (opens in a new tab)</span></a>
+      <a class="portal-link" data-portal-link hidden>Manage subscription <span class="i-ext" aria-hidden="true"></span><span class="sr-only"> (opens in a new tab)</span></a>
     </nav>
     <span class="copyright">© 2026 WAVE Digital. Make waves online.</span>
   </div>
@@ -72,7 +72,7 @@
 <div class="toast" id="toastBox">
   <span class="toast-icon" aria-hidden="true"></span>
   <p class="toast-msg" id="toast" role="status" aria-live="polite" aria-atomic="true"></p>
-  <button class="toast-close" id="toastClose" type="button" aria-label="Dismiss notification" hidden><span aria-hidden="true">×</span></button>
+  <button class="toast-close" id="toastClose" type="button" aria-label="Dismiss notification" hidden><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
 </div>
 
 <script src="script.js" defer></script>

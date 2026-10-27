@@ -119,9 +119,9 @@ const CONFIG = {
   var hero = document.getElementById("home");
   var brandLogo = document.querySelector(".brand-logo");
   var breakTimer = 0;
-  var heroBroken = false; // the headline sheen plays once per visit, even if the background is re-mounted
+  var heroBroken = false; // the header logo waves back once per visit, even if the background is re-mounted
 
-  // Visitor's pause choice (WCAG 2.2.2): stops the hero water and every looping CSS animation.
+  // Visitor's pause choice (WCAG 2.2.2): stops the hero water (the page has no other looping animation).
   var MOTION_KEY = "waveDigital.motion";
   var motionPaused = false;
   try { motionPaused = window.localStorage.getItem(MOTION_KEY) === "paused"; } catch (err) { /* storage unavailable */ }
@@ -228,13 +228,6 @@ const CONFIG = {
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
   }
-
-  // while the page scrolls, decorative CSS loops that can't run on the compositor hold still
-  var rootEl = document.documentElement, scrollIdle = 0;
-  window.addEventListener("scroll", function () {
-    if (scrollIdle) clearTimeout(scrollIdle); else rootEl.classList.add("is-scrolling");
-    scrollIdle = setTimeout(function () { scrollIdle = 0; rootEl.classList.remove("is-scrolling"); }, 180);
-  }, { passive: true });
 
   /* ------------------------------------------------------------------
      Logo ripple follows the pointer
@@ -643,16 +636,6 @@ const CONFIG = {
       window.addEventListener("scroll", queueReveal, { passive: true });
       window.addEventListener("resize", queueReveal, { passive: true });
     }
-  }
-
-  /* ------------------------------------------------------------------
-     Ambient animations (wave dividers, featured glow) only run on screen
-     ------------------------------------------------------------------ */
-  if ("IntersectionObserver" in window) {
-    var ambientIO = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) { entry.target.classList.toggle("in-view", entry.isIntersecting); });
-    }, { rootMargin: "80px 0px" });
-    document.querySelectorAll(".wave-divider,.price-card.featured").forEach(function (el) { ambientIO.observe(el); });
   }
 
   /* ------------------------------------------------------------------

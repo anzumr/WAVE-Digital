@@ -7,8 +7,8 @@ Upload these files together, in the same folder:
   script.js             (all the settings below live at the top of this one file)
   wave-bg.js            (the animated "tide coming in" hero background)
   wave-logo.png         (full-size logo: social-share image, and the hero artwork in older browsers)
-  wave-logo.webp        (full-size logo, lighter WebP version used by the hero, the portfolio and the thank-you page)
-  wave-logo-420.webp    (smaller WebP logo used on phones and tablets)
+  wave-logo-clean-752.webp (full-size logo, lighter WebP version with clean edges, used by the hero, the portfolio and the thank-you page)
+  wave-logo-clean-420.webp (smaller version of the same WebP logo, used on phones and tablets)
   wave-logo-sm.png      (small logo: header and footer)
   favicon.png           (browser tab icon)
   apple-touch-icon.png  (home-screen icon for phones and tablets)
@@ -171,6 +171,8 @@ j. Turn on Stripe's email receipts (in Stripe's settings for customer emails, sw
 
 Until the Stripe links above are filled in, the payment buttons show a short on-screen notice asking visitors to contact you instead and take them to the contact form. Card details are never collected by this website.
 
-Visitors can stop the hero animation and the other looping effects with the "Pause animation" button in the bottom-left corner of the hero; the choice is remembered in their browser. The thank-you page has no looping effects (its few animations finish within five seconds), so it needs no such button. People who have "reduce motion" switched on in their device settings get a still version automatically.
+Visitors can stop the hero animation (the page's only looping effect) with the "Pause animation" button in the bottom-left corner of the hero; the choice is remembered in their browser. The thank-you page has no looping effects (its few animations finish within five seconds), so it needs no such button. People who have "reduce motion" switched on in their device settings get a still version automatically.
+
+To see how the hero animation runs on a particular computer, add ?wave=info to the address (for example https://wavedigital.biz/?wave=info). A small readout appears in the bottom-left corner of the window. It shows which version of the animation that browser runs ("full", or the lighter "lite" one used when the browser draws without the graphics card), which graphics card it reports, and the frame rate. Visitors never see it unless they add ?wave=info themselves. Please open it once in Chrome on your own Windows computer and note the "tier" and "GPU" lines: if they say "lite" or "software rendering", hardware acceleration is switched off in Chrome (Settings > System > "Use graphics acceleration when available"), and the animation will look softer and use more of the computer's processor than it does for most visitors.
 
 No payment processor or contact form account can be activated by uploading these files alone.
