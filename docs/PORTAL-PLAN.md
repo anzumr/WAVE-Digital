@@ -177,9 +177,9 @@ These need your own accounts; I'll walk you through each step:
 4. **Stripe:** when you set up Stripe, turn on the customer portal.
 5. **Client sites:** tell me where each current client site is hosted now.
 
-## 12. Still to decide
+## 12. Decisions
 
-1. Should clients see all their past requests, or only the last 12 months?
-2. Which address should portal emails come from, for example `hello@wavedigital.biz`? It needs a mailbox, or Resend for sending only.
-3. Should clients be allowed to upload files freely, or only when you ask for something?
-4. Should the monthly PDF summary be emailed to clients automatically, or only downloaded from the portal?
+1. **Request history:** clients see all their past requests (to confirm).
+2. **Email address:** portal emails come from `clientsupport@wavedigital.biz`. Resend sends from it. Replies are forwarded to your own inbox for free with Cloudflare Email Routing (needs the domain's DNS on Cloudflare), so no paid mailbox is needed to start.
+3. **File uploads:** both. Clients can upload files any time, and you can also ask for specific files (a "requested files" checklist on their Files page).
+4. **Monthly summary:** still to decide: email it to clients automatically, or download only from the portal?
