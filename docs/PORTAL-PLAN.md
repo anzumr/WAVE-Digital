@@ -179,7 +179,7 @@ These need your own accounts; I'll walk you through each step:
 
 ## 12. Decisions
 
-1. **Request history:** clients see all their past requests (to confirm).
+1. **Request history:** clients see all their past requests.
 2. **Email address:** portal emails come from `clientsupport@wavedigital.biz`. Resend sends from it. Replies are forwarded to your own inbox for free with Cloudflare Email Routing (needs the domain's DNS on Cloudflare), so no paid mailbox is needed to start.
 3. **File uploads:** both. Clients can upload files any time, and you can also ask for specific files (a "requested files" checklist on their Files page).
-4. **Monthly summary:** still to decide: email it to clients automatically, or download only from the portal?
+4. **Monthly summary:** emailed to each client automatically at the start of every month (with the PDF attached and a link to their Stats page), and also downloadable from the portal. You can preview and adjust it before it goes out, for example to add a note.
