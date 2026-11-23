@@ -80,9 +80,10 @@
       W.wireRowLinks(el);
     });
   });
-  W.clientRoute('/requests/new', function (c) {
+  W.clientRoute('/requests/new', function (c, _, query) {
+    var type = W.REQ_TYPES.some(function (t) { return t[0] === query.type; }) ? query.type : 'website';
     var el = W.page(html`${W.head('New request', 'Tell WAVE what you need. You\'ll get an email when there\'s an update.', null, ['/requests', 'Requests'])}
-      ${W.requestForm({ cancel: '/requests' })}`);
+      ${W.requestForm({ cancel: '/requests', type: type })}`);
     W.wireRequestForm(el.querySelector('form'), c.id, function (req) { W.go('/requests/' + req.id); });
   });
   W.clientRoute('/requests/:id', function (c, p) { return W.requestPage(p.id, false); });

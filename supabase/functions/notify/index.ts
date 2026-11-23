@@ -96,9 +96,35 @@ async function requestUpdate(db: Db, data: Record<string, string>) {
   });
 }
 
+async function meetingBooked(db: Db, data: Record<string, string>) {
+  const { data: m } = await db.from("meetings")
+    .select("id, client_id, starts_at, topic, clients(business_name), profiles(full_name, email)")
+    .eq("id", data.meeting_id).single();
+  if (!m) return { skipped: "meeting not found" };
+  // deno-lint-ignore no-explicit-any
+  const mm = m as any;
+  const business = mm.clients?.business_name ?? "A client";
+  const who = mm.profiles?.full_name || mm.profiles?.email || "Someone";
+  const when = m.starts_at
+    ? new Date(m.starts_at).toUTCString().replace(" GMT", " UTC")
+    : "the time in your Calendly notification";
+  const link = `${PORTAL_URL}#/admin/clients/${m.client_id}/meetings`;
+  return await sendEmail({
+    to: await adminEmails(db),
+    subject: `${business} booked a meeting`,
+    html: renderEmail({
+      heading: `${business} booked a meeting`,
+      paragraphs: [`<strong>${esc(who)}</strong> booked “${esc(m.topic)}” for ${esc(when)} from the portal.`],
+      button: { label: "Open their meetings", url: link },
+    }),
+    text: plainText(`${business} booked a meeting`, [`${who} booked "${m.topic}" for ${when} from the portal.`], link),
+  });
+}
+
 const HANDLERS: Record<string, (db: Db, data: Record<string, string>) => Promise<unknown>> = {
   request_created: requestCreated,
   request_update: requestUpdate,
+  meeting_booked: meetingBooked,
 };
 
 serve(async (req) => {
