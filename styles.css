@@ -104,6 +104,13 @@ h3,h4{letter-spacing:-.01em}
 @media(min-width:901px){
   .links a:not(.nav-cta)::before{content:"";position:absolute;top:0;bottom:0;left:-10px;right:-10px}
 }
+/* client portal: "Sign in" and the "Sign up" pill share one capsule, the pill tinted so it reads as the new-account action */
+.account-links{display:inline-flex;align-items:center;gap:2px;padding:3px;border:1px solid var(--line);border-radius:999px}
+.links .account-links a{min-height:36px;padding:0 14px;border-radius:999px;font-weight:500}
+.links .account-links a::after,.links .account-links a::before{content:none}
+.links .account-links .signin:hover{color:var(--white);background:rgba(255,255,255,.06)}
+.links .account-links .signup-pill{background:rgba(112,229,242,.14);color:var(--cyan);font-weight:600;transition:background-color .18s,color .18s}
+.links .account-links .signup-pill:hover{background:var(--cyan);color:var(--ink)}
 .menu-toggle{display:none;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:var(--radius-sm);width:48px;height:48px;flex-direction:column;align-items:center;justify-content:center;gap:5px;padding:0}
 .menu-toggle span{width:21px;height:2px;border-radius:2px;background:var(--white);transition:transform .25s,opacity .25s}
 .menu-toggle.active span:first-child{transform:translateY(7px) rotate(45deg)}
@@ -529,6 +536,9 @@ h3,h4{letter-spacing:-.01em}
   .links a:not(.nav-cta)::after{left:0;right:auto;top:17px;bottom:17px;width:3px;height:auto;transform:scaleY(0);transform-origin:center}
   .links a:hover::after,.links a[aria-current="true"]::after{transform:scaleY(1)}
   .links a:not(.nav-cta):hover{background:rgba(112,229,242,.05)}
+  .account-links{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0 24px;padding:0;border:0;border-radius:0}
+  .links .account-links a{justify-content:center;min-height:52px;padding:0 14px;margin:0;border:1px solid var(--line);border-radius:999px;font-size:17px}
+  .links .account-links .signup-pill{border-color:rgba(112,229,242,.45)}
   .links .nav-cta{justify-content:center;margin-top:auto;min-height:56px;border:1px solid var(--cyan);font-size:17px;background:var(--cyan);color:var(--ink)}
   .about,.contact-grid{grid-template-columns:minmax(0,1fr)}
   .acrostic{margin-top:44px}
