@@ -101,6 +101,15 @@ service answered.
    `GOOGLE_ADS_DEVELOPER_TOKEN`, `GOOGLE_ADS_LOGIN_CUSTOMER_ID` (your manager account ID).
    Optional: `GOOGLE_ADS_API_VERSION` (default `v21`).
 
+## Sign-ups
+
+Anyone can create an account at wavedigital.biz/me → **Create an account** (email confirmation required):
+- **"I'm a current WAVE client"**: waits on **Sign-ups** until you approve and link them to their business
+  (the matching client is pre-selected), or decline (their account is deleted). You get an email each time.
+- **"I'd like to work with WAVE"**: becomes a **lead** straight away with their own portal (requests,
+  meetings, files; no stats or billing). Their project details are their first request, and you get a
+  "New lead" email. Change their status to Active on the client page when they sign on.
+
 ## 7. Before clients depend on it
 
 - Upgrade Supabase to **Pro ($25/month)**: the free plan pauses after 7 days without activity.
