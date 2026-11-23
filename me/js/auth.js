@@ -139,7 +139,7 @@
       </form>`, html`<a href="#/login">Back to sign in</a>`);
     W.onSubmit(el.querySelector('form'), function (v) {
       return W.fn('password-reset', { email: v.email }).then(function () {
-        authPage('Check your email', '', html`<p>If <strong>${v.email}</strong> has a portal account, a reset link is on its way. It works once and expires in 1 hour.</p>
+        authPage('Check your email', '', html`<p>If <strong>${v.email}</strong> has a portal account, a reset link is on its way. It works once and expires in 24 hours.</p>
           <p class="muted" style="margin-top:12px">Nothing arrived after a few minutes? Check your spam folder, or contact WAVE at <a href="mailto:${W.state.settings.support_email || 'clientsupport@wavedigital.biz'}">${W.state.settings.support_email || 'clientsupport@wavedigital.biz'}</a>.</p>`,
         html`<a href="#/login">Back to sign in</a>`);
       });

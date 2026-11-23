@@ -48,10 +48,10 @@ function resetEmail(link: string) {
   return {
     subject: "Reset your WAVE portal password",
     html: renderEmail({ heading: "Reset your password",
-      paragraphs: ["Use the button below to choose a new password for the WAVE Digital client portal. The link works once and expires in 1 hour."],
+      paragraphs: ["Use the button below to choose a new password for the WAVE Digital client portal. The link works once and expires in 24 hours."],
       button: { label: "Choose a new password", url: link },
       footnote: "If you didn't ask for this, you can ignore this email; your password stays the same." }),
-    text: plainText("Reset your WAVE portal password", ["Choose a new password with this link (works once, expires in 1 hour):"], link),
+    text: plainText("Reset your WAVE portal password", ["Choose a new password with this link (works once, expires in 24 hours):"], link),
   };
 }
 
