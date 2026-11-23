@@ -14,17 +14,77 @@
   W.billingPill = function (s) { return s === 'overdue' ? W.pill('Overdue', 'red') : W.pill('Current', 'green'); };
 
   // Updates the "new requests" count in the admin menu.
+  function setBadge(path, n) {
+    W.navBadges[path] = n || 0;
+    var a = document.querySelector('.nav a[href="#' + path + '"]');
+    if (!a) return;
+    var c = a.querySelector('.count');
+    if (n) { if (!c) { c = document.createElement('span'); c.className = 'count'; a.appendChild(c); } c.textContent = n; }
+    else if (c) c.remove();
+  }
   W.refreshBadges = function () {
     if (!W.isAdmin()) return Promise.resolve();
-    return W.sb.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'new').then(function (r) {
-      W.navBadges['/admin/requests'] = r.count || 0;
-      var a = document.querySelector('.nav a[href="#/admin/requests"]');
-      if (!a) return;
-      var c = a.querySelector('.count');
-      if (r.count) { if (!c) { c = document.createElement('span'); c.className = 'count'; a.appendChild(c); } c.textContent = r.count; }
-      else if (c) c.remove();
-    });
+    return Promise.all([
+      W.sb.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'new'),
+      W.sb.from('signup_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending')
+    ]).then(function (r) { setBadge('/admin/requests', r[0].count); setBadge('/admin/signups', r[1].count); });
   };
+
+  // ---------- sign-ups ----------
+  var SERVICE_LABEL = { website: 'A website', social: 'Social media', advertising: 'Advertising', branding: 'Logo / branding', broken: 'Fixing something', other: 'Something else' };
+  W.route('/admin/signups', 'admin', function (_, query) {
+    W.loading();
+    var show = query.show === 'all' ? 'all' : 'pending';
+    var q = W.sb.from('signup_requests').select('*, profiles(full_name, email)').order('created_at', { ascending: false }).limit(200);
+    if (show === 'pending') q = q.eq('status', 'pending');
+    return Promise.all([W.q(q), W.q(W.sb.from('clients').select('id, business_name, contact_email').neq('status', 'cancelled').order('business_name'))]).then(function (res) {
+      var rows = res[0], clients = res[1];
+      var STATE = { unconfirmed: ['Email not confirmed', 'muted'], pending: ['Waiting for you', 'amber'], approved: ['Approved', 'green'], converted: ['New lead', 'cyan'], declined: ['Declined', 'muted'] };
+      function guess(r) {
+        var name = r.business_name.toLowerCase().trim(), email = ((r.profiles && r.profiles.email) || '').toLowerCase();
+        var m = clients.filter(function (c) { return c.business_name.toLowerCase().trim() === name || (email && c.contact_email.toLowerCase() === email); })[0];
+        return m ? m.id : '';
+      }
+      var el = W.page(html`
+        ${W.head('Sign-ups', 'People who created an account on the site. Current clients wait for you here; new prospects become leads automatically.')}
+        ${W.tabs([['/admin/signups', 'Waiting for you'], ['/admin/signups?show=all', 'All sign-ups']], show === 'all' ? '/admin/signups?show=all' : '/admin/signups')}
+        <div class="card">${rows.length ? html`<div class="list">${rows.map(function (r) {
+          var st = STATE[r.status] || [r.status, 'muted'];
+          var who = (r.profiles && (r.profiles.full_name || r.profiles.email)) || 'Unknown';
+          return html`<div class="list-item" style="align-items:flex-start;flex-wrap:wrap" data-row="${r.id}"><div class="grow" style="min-width:240px">
+              <div class="cell-title">${who} · ${r.business_name}</div>
+              <div class="cell-sub">${r.profiles && r.profiles.email}${r.phone ? ' · ' + r.phone : ''} · ${r.kind === 'existing' ? 'Says they\'re a current client' : 'Prospect: ' + (SERVICE_LABEL[r.service] || 'project')} · ${W.ago(r.created_at)}</div>
+              ${r.details ? html`<div class="tl-body muted" style="font-size:14px">${r.details}</div>` : ''}</div>
+            <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end">${W.pill(st[0], st[1])}
+              ${r.status === 'pending' ? html`<div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center">
+                  <select data-client aria-label="Client for ${who}" style="min-width:200px"><option value="">Link to client…</option>${W.options(clients.map(function (c) { return [c.id, c.business_name]; }), guess(r))}</select>
+                  <button type="button" class="btn small primary" data-approve="${r.id}">Approve</button>
+                  <button type="button" class="btn small" data-lead="${r.id}">Treat as new lead</button>
+                  <button type="button" class="btn small danger" data-decline="${r.id}">Decline</button></div>` : ''}
+              ${r.client_id ? html`<a class="btn small" href="#/admin/clients/${r.client_id}">Open client</a>` : ''}</div></div>`;
+        })}</div>` : W.empty(show === 'pending' ? 'Nobody waiting' : 'No sign-ups yet', show === 'pending' ? 'When a current client signs up, you approve them here.' : 'Sign-ups from wavedigital.biz/me will show up here.')}</div>`);
+      el.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-approve],[data-lead],[data-decline]');
+        if (!b) return;
+        var row = b.closest('[data-row]'), id = row.getAttribute('data-row');
+        if (b.hasAttribute('data-approve')) {
+          var cid = row.querySelector('[data-client]').value;
+          if (!cid) { W.toast('Choose which client they belong to first.', true); return; }
+          b.disabled = true;
+          W.fn('signup', { action: 'approve', signup_id: id, client_id: cid }).then(function () { W.toast('Approved. They\'ve been emailed.'); W.refreshBadges(); W.render(); }, function (err) { b.disabled = false; W.toast(err.message, true); });
+        } else if (b.hasAttribute('data-lead')) {
+          b.disabled = true;
+          W.fn('signup', { action: 'make_lead', signup_id: id }).then(function (r) { W.toast('Added as a new lead.'); W.refreshBadges(); W.go('/admin/clients/' + r.client_id); }, function (err) { b.disabled = false; W.toast(err.message, true); });
+        } else {
+          W.confirm('Decline this sign-up?', 'Their account is deleted and they won\'t be able to sign in.', 'Decline', true).then(function (ok) {
+            if (!ok) return;
+            W.fn('signup', { action: 'decline', signup_id: id }).then(function () { W.toast('Declined.'); W.refreshBadges(); W.render(); }, function (err) { W.toast(err.message, true); });
+          });
+        }
+      });
+      W.refreshBadges();
+    });
+  });
 
   // ---------- overview ----------
   W.route('/admin', 'admin', function () {
@@ -38,8 +98,10 @@
       W.sb.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'done').gte('closed_at', monthStart),
       W.q(W.sb.from('meetings').select('id, topic, starts_at, client_id, clients(business_name)').eq('status', 'scheduled').gte('starts_at', new Date().toISOString()).order('starts_at').limit(5)),
       W.q(W.sb.from('file_requests').select('id, title, created_at, client_id, clients(business_name)').eq('status', 'open').order('created_at')),
-      W.q(W.sb.from('monthly_summaries').select('id, status, last_error, month').eq('status', 'draft'))
+      W.q(W.sb.from('monthly_summaries').select('id, status, last_error, month').eq('status', 'draft')),
+      W.q(W.sb.from('signup_requests').select('id, business_name').eq('status', 'pending'))
     ]).then(function (res) {
+      var pendingSignups = res[7];
       var clients = res[0], open = res[1], activity = res[2], doneThisMonth = res[3].count || 0;
       var meetings = res[4], waitingFiles = res[5], drafts = res[6];
       var active = clients.filter(function (c) { return c.status === 'active'; });
@@ -56,6 +118,7 @@
       var failedDrafts = drafts.filter(function (d) { return d.last_error; });
       var name = ((W.state.profile.full_name || '').split(' ')[0]) || 'there';
       var todo = [];
+      if (pendingSignups.length) todo.push(html`<a class="list-item" href="#/admin/signups"><div class="grow"><div class="cell-title">${pendingSignups.length} client sign-up${pendingSignups.length === 1 ? '' : 's'} to approve</div><div class="cell-sub">${pendingSignups.map(function (p) { return p.business_name; }).join(', ')}</div></div>${W.pill('Sign-ups', 'amber')}</a>`);
       if (fresh.length) todo.push(html`<a class="list-item" href="#/admin/requests?status=new"><div class="grow"><div class="cell-title">${fresh.length} new request${fresh.length === 1 ? '' : 's'}</div><div class="cell-sub">Waiting for your first reply</div></div>${W.pill('Requests', 'cyan')}</a>`);
       if (overdue.length) todo.push(html`<a class="list-item" href="#/admin/clients?billing=overdue"><div class="grow"><div class="cell-title">${overdue.length} overdue payment${overdue.length === 1 ? '' : 's'}</div><div class="cell-sub">${overdue.map(function (c) { return c.business_name; }).join(', ')}</div></div>${W.pill('Billing', 'red')}</a>`);
       if (drafts.length) todo.push(html`<a class="list-item" href="#/admin/summaries?month=${drafts[0].month.slice(0, 7)}"><div class="grow"><div class="cell-title">${drafts.length} summar${drafts.length === 1 ? 'y' : 'ies'} waiting to go out</div><div class="cell-sub">${failedDrafts.length ? failedDrafts.length + ' could not be sent: ' + failedDrafts[0].last_error : 'Add a note or send early'}</div></div>${W.pill('Summaries', failedDrafts.length ? 'red' : 'amber')}</a>`);

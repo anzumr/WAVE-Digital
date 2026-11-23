@@ -25,6 +25,15 @@
   W.consumeAuthRedirect = function () {
     var search = new URLSearchParams(location.search);
     var tokenHash = search.get('token_hash');
+    if (tokenHash && search.get('type') === 'signup') {
+      // Sign-up confirmation: verify the email, then finish setting up the account.
+      return W.sb.auth.verifyOtp({ token_hash: tokenHash, type: 'signup' }).then(function (r) {
+        history.replaceState(null, '', location.pathname + (r.error ? '#/login' : '#/home'));
+        if (r.error) return { error: 'That confirmation link has expired or was already used. Try signing in; if that fails, sign up again.' };
+        return W.fn('signup', { action: 'complete' }).then(function () { return { ok: true, welcome: true }; },
+          function () { return { ok: true, welcome: true }; });
+      });
+    }
     if (tokenHash) {
       var type = search.get('type') === 'invite' ? 'invite' : 'recovery';
       var mode = type === 'invite' ? 'welcome' : 'recovery';
@@ -113,11 +122,12 @@
         <label class="field"><span>Password</span><input type="password" name="password" autocomplete="current-password" required></label>
         <p class="form-error" role="alert"></p>
         <button class="btn primary full" type="submit" data-busy="Signing in…">Sign in</button>
-      </form>`, html`<a href="#/forgot">Forgot password?</a><a href="${window.WAVE_CONFIG.siteUrl}">Back to wavedigital.biz</a>`);
+      </form>`, html`<a href="#/forgot">Forgot password?</a><a href="#/signup">Create an account</a><a href="${window.WAVE_CONFIG.siteUrl}">Back to wavedigital.biz</a>`);
     W.pendingAuthError = null;
     W.onSubmit(el.querySelector('form'), function (v) {
       return W.sb.auth.signInWithPassword({ email: v.email, password: v.password }).then(function (r) {
         if (r.error) {
+          if (/not confirmed/i.test(r.error.message)) throw new Error('Please confirm your email first: open the link we emailed you when you signed up.');
           throw new Error(/invalid login/i.test(r.error.message) ? 'That email and password don\'t match. Try again or reset your password.' : W.friendlyError(r.error).message);
         }
         contextLoaded = false;
@@ -126,6 +136,48 @@
           contextLoaded = true;
           W.go(next || W.home());
         });
+      });
+    });
+  });
+
+  var SIGNUP_SERVICES = [['website', 'A website'], ['social', 'Social media'], ['advertising', 'Advertising'],
+    ['branding', 'Logo / branding'], ['broken', 'Fixing something'], ['other', 'Something else']];
+  W.route('/signup', 'public', function (_, query) {
+    var kind = query.kind === 'existing' ? 'existing' : (query.kind === 'prospect' ? 'prospect' : null);
+    if (!kind) {
+      var el0 = authPage('Create an account', 'Which describes you?', html`
+        <div style="display:grid;gap:12px">
+          <a class="btn full" style="justify-content:flex-start;min-height:72px;padding:12px 16px;text-align:left;white-space:normal" href="#/signup?kind=existing">
+            <span><strong style="display:block">I'm a current WAVE client</strong><span class="muted" style="font-weight:400;font-size:13.5px">See your stats, send requests and manage billing. WAVE confirms your account.</span></span></a>
+          <a class="btn full" style="justify-content:flex-start;min-height:72px;padding:12px 16px;text-align:left;white-space:normal" href="#/signup?kind=prospect">
+            <span><strong style="display:block">I'd like to work with WAVE</strong><span class="muted" style="font-weight:400;font-size:13.5px">Tell us about your project, book a free call and share files.</span></span></a>
+        </div>`, html`<a href="#/login">I already have an account</a>`);
+      return el0;
+    }
+    var existing = kind === 'existing';
+    var el = authPage(existing ? 'Sign up as a WAVE client' : 'Start a project with WAVE',
+      existing ? 'Create your login. WAVE will confirm you and connect your business.' : 'Tell us about your business and what you need. You\'ll get your own portal to follow along.', html`
+      <form novalidate>
+        <label class="field"><span>Your name</span><input type="text" name="full_name" autocomplete="name" maxlength="120" required></label>
+        <label class="field"><span>Business name</span><input type="text" name="business_name" autocomplete="organization" maxlength="120" required></label>
+        <label class="field"><span>Email</span><input type="email" name="email" autocomplete="email" maxlength="200" required></label>
+        ${existing ? '' : html`<label class="field"><span>Phone <span class="hint">Optional</span></span><input type="tel" name="phone" autocomplete="tel" maxlength="40"></label>
+          <label class="field"><span>What do you need help with?</span><select name="service" required>${W.options(SIGNUP_SERVICES, 'website')}</select></label>
+          <label class="field"><span>Tell us about it</span><textarea name="details" maxlength="5000" required placeholder="What's your business, what do you want to achieve, and any timing or budget in mind?"></textarea></label>`}
+        <label class="field"><span>Password <span class="hint">At least 10 characters, letters and numbers</span></span><input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
+        <label class="field"><span>Confirm password</span><input type="password" name="confirm" autocomplete="new-password" minlength="10" required></label>
+        <div aria-hidden="true" style="position:absolute;left:-10000px;width:1px;height:1px;overflow:hidden"><label>Website<input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+        <p class="form-error" role="alert"></p>
+        <button class="btn primary full" type="submit" data-busy="Creating your account…">Create account</button>
+      </form>`, html`<a href="#/signup">Back</a><a href="#/login">I already have an account</a>`);
+    W.onSubmit(el.querySelector('form'), function (v) {
+      if (v.password !== v.confirm) throw new Error("The two passwords don't match.");
+      if (!/[a-z]/i.test(v.password) || !/[0-9]/.test(v.password)) throw new Error('Use both letters and numbers in your password.');
+      return W.fn('signup', { action: 'register', kind: kind, full_name: v.full_name, business_name: v.business_name, email: v.email,
+        phone: v.phone || '', service: v.service || '', details: v.details || '', password: v.password, website: v.website || '' }).then(function () {
+        authPage('Check your email', '', html`<p>We sent a confirmation link to <strong>${v.email}</strong>. Open it to activate your account. It expires in 24 hours.</p>
+          <p class="muted" style="margin-top:12px">Nothing after a few minutes? Check your spam folder. Already had an account with this email? We sent a reminder to sign in instead.</p>`,
+          html`<a href="#/login">Go to sign in</a>`);
       });
     });
   });

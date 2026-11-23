@@ -309,6 +309,28 @@ begin
   insert into results values ('B cannot delete A''s files', n = 0, 'deleted ' || n);
   reset role;
 
+  -- ---------- sign-ups ----------
+  insert into public.signup_requests (user_id, kind, business_name, status) values (un, 'existing', 'Unlinked Co', 'pending'), (ub, 'prospect', 'B Biz', 'converted');
+  perform set_config('request.jwt.claims', json_build_object('sub', un, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.signup_requests;
+  insert into results values ('Signed-up user sees only their own sign-up', n = 1, 'saw ' || n);
+  update public.signup_requests set status = 'approved', client_id = ca where user_id = un;
+  get diagnostics n = row_count;
+  insert into results values ('Signed-up user cannot approve themselves', n = 0, 'updated ' || n);
+  begin
+    insert into public.signup_requests (user_id, kind, business_name) values (un, 'prospect', 'again');
+    insert into results values ('Users cannot create sign-up rows directly', false, 'succeeded');
+  exception when others then insert into results values ('Users cannot create sign-up rows directly', true, sqlerrm); end;
+  j := public.portal_context();
+  insert into results values ('portal_context reports the pending sign-up', (j -> 'signup' ->> 'status') = 'pending', (j -> 'signup')::text);
+  reset role;
+  perform set_config('request.jwt.claims', json_build_object('sub', admin_id, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.signup_requests where user_id in (un, ub);
+  insert into results values ('Admin sees all sign-ups', n = 2, 'saw ' || n);
+  reset role;
+
   -- ---------- signed-out visitors ----------
   set local role anon;
   begin

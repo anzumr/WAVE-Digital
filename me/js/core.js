@@ -154,6 +154,7 @@
       W.state.profile = ctx.profile;
       W.state.clients = ctx.clients || [];
       W.state.settings = ctx.settings || {};
+      W.state.signup = ctx.signup || null;
       var saved = null;
       try { saved = localStorage.getItem('wave-portal-client'); } catch (e) { /* storage may be blocked */ }
       var ids = W.state.clients.map(function (c) { return c.id; });
@@ -318,6 +319,7 @@
       return [
         ['/admin', 'Overview', 'grid'],
         ['/admin/clients', 'Clients', 'users'],
+        ['/admin/signups', 'Sign-ups', 'user'],
         ['/admin/requests', 'Requests', 'inbox'],
         ['/admin/stats', 'Monthly stats', 'chart'],
         ['/admin/summaries', 'Summaries', 'doc'],
@@ -325,15 +327,17 @@
         ['/admin/settings', 'Settings', 'gear']
       ];
     }
+    var cur = W.currentClient();
+    var lead = cur && cur.status === 'lead';
     return [
       ['/home', 'Home', 'home'],
-      ['/stats', 'Stats', 'chart'],
+      lead ? null : ['/stats', 'Stats', 'chart'],
       ['/requests', 'Requests', 'inbox'],
       ['/meetings', 'Meetings', 'calendar'],
-      ['/billing', 'Billing', 'card'],
+      lead ? null : ['/billing', 'Billing', 'card'],
       ['/files', 'Files', 'folder'],
       ['/account', 'Account', 'user']
-    ];
+    ].filter(Boolean);
   }
   W.navBadges = {};
   function navHtml(current) {

@@ -5,8 +5,15 @@
 
   // Shown when a login isn't linked to any business yet.
   function noBusiness() {
-    W.page(html`${W.head('Almost there', '')}<div class="card"><p>Your account isn't linked to a business yet. WAVE will connect it shortly.</p>
-      <p class="muted" style="margin-top:10px">Questions? Email <a href="mailto:${W.state.settings.support_email}">${W.state.settings.support_email}</a>.</p></div>`);
+    var s = W.state.signup;
+    var msg = s && s.kind === 'existing' && s.status === 'pending'
+      ? html`<p>Thanks for signing up! WAVE will confirm you're a client of <strong>${s.business_name}</strong> and connect your account, usually within one business day. You'll get an email when it's ready.</p>`
+      : s && s.status === 'declined'
+        ? html`<p>WAVE couldn't match your account to a client. If you think this is a mistake, please get in touch.</p>`
+        : html`<p>Your account isn't linked to a business yet. WAVE will connect it shortly.</p>`;
+    W.page(html`${W.head('Almost there', '')}<div class="card">${msg}
+      <p class="muted" style="margin-top:10px">Questions? Email <a href="mailto:${W.state.settings.support_email}">${W.state.settings.support_email}</a>.</p>
+      <p style="margin-top:16px"><a class="btn" href="${W.state.settings.calendly_url}" target="_blank" rel="noopener noreferrer">${W.icon('calendar')}Book a call with WAVE</a></p></div>`);
   }
   // Runs a client page only when a business is selected.
   W.clientRoute = function (path, handler) {
@@ -57,6 +64,13 @@
   });
 
   W.addHomeSection(90, function (client, slot) {
+    if (client.status === 'lead') {
+      W.mount(slot, html`<div class="card"><div class="card-head"><h2>Next steps</h2></div>
+        <p>Thanks for reaching out! WAVE will review your project and get back to you. The fastest way to get started is a free call.</p>
+        <div class="form-actions" style="justify-content:flex-start;margin-top:14px"><a class="btn primary" href="#/meetings">${W.icon('calendar')}Book a free call</a>
+          <a class="btn" href="#/files">${W.icon('upload')}Share files</a></div></div>`);
+      return;
+    }
     var cycle = { monthly: '/mo', yearly: '/mo, billed yearly', one_time: ' one-time', none: '' }[client.billing_cycle] || '';
     W.mount(slot, html`<div class="card"><div class="card-head"><h2>Your plan</h2><a class="btn small" href="#/billing">Billing</a></div>
       <dl class="kv"><dt>Plan</dt><dd>${client.plan || 'No plan yet'}</dd>
