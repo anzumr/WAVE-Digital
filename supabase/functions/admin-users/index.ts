@@ -1,7 +1,7 @@
 // Admin-only account actions: invite people to a client's portal, resend invites,
 // create password-reset links, list and remove portal access.
 import {
-  EMAIL_RE, HttpError, json, PORTAL_URL, portalAuthLink, requireAdmin, serve, serviceClient,
+  adminEmails, EMAIL_RE, HttpError, json, PORTAL_URL, portalAuthLink, requireAdmin, serve, serviceClient,
 } from "../_shared/common.ts";
 import { esc, plainText, renderEmail, sendEmail } from "../_shared/email.ts";
 
@@ -159,11 +159,29 @@ async function removeMember(db: Db, body: Record<string, unknown>, callerId: str
   return { removed: true, account_deleted: accountDeleted };
 }
 
+// Sends a test email to where the admin's alerts go, so WAVE can confirm email works.
+async function testEmail(db: Db, caller: { email: string }) {
+  const to = (await adminEmails(db)).concat(caller.email).filter(Boolean)[0];
+  const sent = await sendEmail({
+    to: [to],
+    subject: "Test email from your WAVE portal",
+    html: renderEmail({
+      heading: "Emails are working",
+      paragraphs: ["This is a test from your WAVE Digital client portal. Clients will get invites, request updates and monthly summaries from clientsupport@wavedigital.biz.",
+        "Reply to this email to check where client replies land."],
+      button: { label: "Open the portal", url: PORTAL_URL },
+    }),
+    text: plainText("Emails are working", ["This is a test from your WAVE Digital client portal.", "Reply to this email to check where client replies land."], PORTAL_URL),
+  });
+  return { to, emailed: sent.sent, email_note: sent.reason ?? null };
+}
+
 serve(async (req) => {
   const db = serviceClient();
   const caller = await requireAdmin(req, db);
   const body = await req.json().catch(() => ({})) as Record<string, unknown>;
   switch (body.action) {
+    case "test_email": return json(req, await testEmail(db, caller));
     case "invite": return json(req, await invite(db, body));
     case "resend_invite": return json(req, await resendInvite(db, body));
     case "reset_link": return json(req, await resetLink(db, body));

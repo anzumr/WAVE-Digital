@@ -436,7 +436,7 @@
               <label class="field"><span>Send my alerts to <span class="hint">Leave empty to use your login email</span></span><input type="email" name="admin_notify_email" value="${adm.admin_notify_email}" maxlength="200"></label>
               <label class="field"><span>Monthly summaries go out <span class="hint">Days after the month ends, so you can add a note first</span></span>
                 <select name="summary_send_delay_days">${W.options([[0, 'Right away (the 1st)'], [1, '1 day later'], [2, '2 days later'], [3, '3 days later'], [5, '5 days later'], [7, '7 days later']], adm.summary_send_delay_days)}</select></label>
-            </div><p class="form-error" role="alert"></p><div class="form-actions"><button class="btn primary" type="submit">Save</button></div></form>
+            </div><p class="form-error" role="alert"></p><div class="form-actions"><button type="button" class="btn" data-test-email>${W.icon('mail')}Send a test email</button><button class="btn primary" type="submit">Save</button></div></form>
           <form class="card" data-pass novalidate><div class="card-head"><div><h2>Change your password</h2></div></div>
             <div style="display:grid;gap:14px">
               <label class="field"><span>New password <span class="hint">At least 10 characters, letters and numbers</span></span><input type="password" name="password" autocomplete="new-password" minlength="10" required></label>
@@ -453,6 +453,12 @@
       W.onSubmit(el.querySelector('[data-adm]'), function (v) {
         return W.q(W.sb.from('admin_settings').update({ admin_notify_email: (v.admin_notify_email || '').toLowerCase(), summary_send_delay_days: Number(v.summary_send_delay_days) }).eq('id', true))
           .then(function () { W.toast('Saved.'); });
+      });
+      el.querySelector('[data-test-email]').addEventListener('click', function (e) {
+        var b = e.currentTarget; b.disabled = true;
+        W.fn('admin-users', { action: 'test_email' }).then(function (r) {
+          W.toast(r.emailed ? 'Test email sent to ' + r.to + '. Check your inbox (and spam).' : (r.email_note || 'The test email was not sent.'), !r.emailed);
+        }, function (err) { W.toast(err.message, true); }).then(function () { b.disabled = false; });
       });
       W.wirePasswordForm(el.querySelector('[data-pass]'));
     });
