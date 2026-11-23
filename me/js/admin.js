@@ -30,39 +30,94 @@
   W.route('/admin', 'admin', function () {
     W.loading();
     var monthStart = W.isoDay(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    var weekAhead = W.isoDay(new Date(Date.now() + 7 * 86400000));
     return Promise.all([
-      W.q(W.sb.from('clients').select('id, business_name, status, billing_status, monthly_amount, next_payment_date')),
+      W.q(W.sb.from('clients').select('id, business_name, status, billing_status, monthly_amount, next_payment_date, plan')),
       W.q(W.sb.from('requests').select('id, ref_no, title, type, status, priority, updated_at, created_at, wanted_by, client_id, clients(business_name)').in('status', W.OPEN_STATUSES).order('created_at', { ascending: false })),
-      W.q(W.sb.from('activity_log').select('id, summary, created_at, client_id, clients(business_name)').order('created_at', { ascending: false }).limit(12)),
-      W.sb.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'done').gte('closed_at', monthStart)
+      W.q(W.sb.from('activity_log').select('id, summary, created_at, client_id, clients(business_name)').order('created_at', { ascending: false }).limit(10)),
+      W.sb.from('requests').select('id', { count: 'exact', head: true }).eq('status', 'done').gte('closed_at', monthStart),
+      W.q(W.sb.from('meetings').select('id, topic, starts_at, client_id, clients(business_name)').eq('status', 'scheduled').gte('starts_at', new Date().toISOString()).order('starts_at').limit(5)),
+      W.q(W.sb.from('file_requests').select('id, title, created_at, client_id, clients(business_name)').eq('status', 'open').order('created_at')),
+      W.q(W.sb.from('monthly_summaries').select('id, status, last_error, month').eq('status', 'draft'))
     ]).then(function (res) {
       var clients = res[0], open = res[1], activity = res[2], doneThisMonth = res[3].count || 0;
+      var meetings = res[4], waitingFiles = res[5], drafts = res[6];
       var active = clients.filter(function (c) { return c.status === 'active'; });
       var mrr = active.reduce(function (s, c) { return s + Number(c.monthly_amount || 0); }, 0);
       var overdue = clients.filter(function (c) { return c.billing_status === 'overdue' && c.status !== 'cancelled'; });
+      var dueSoon = active.filter(function (c) { return c.next_payment_date && c.next_payment_date <= weekAhead && c.billing_status !== 'overdue'; })
+        .sort(function (a, b) { return a.next_payment_date < b.next_payment_date ? -1 : 1; });
       var fresh = open.filter(function (r) { return r.status === 'new'; });
       open.sort(function (a, b) { return (b.priority === 'urgent') - (a.priority === 'urgent') || (b.created_at > a.created_at ? 1 : -1); });
+      var byPlan = {};
+      active.forEach(function (c) { var k = c.plan || 'No plan'; byPlan[k] = (byPlan[k] || 0) + Number(c.monthly_amount || 0); });
+      var planRows = Object.keys(byPlan).map(function (k) { return { label: k, value: byPlan[k] }; })
+        .filter(function (r) { return r.value > 0; }).sort(function (a, b) { return b.value - a.value; });
+      var failedDrafts = drafts.filter(function (d) { return d.last_error; });
       var name = ((W.state.profile.full_name || '').split(' ')[0]) || 'there';
+      var todo = [];
+      if (fresh.length) todo.push(html`<a class="list-item" href="#/admin/requests?status=new"><div class="grow"><div class="cell-title">${fresh.length} new request${fresh.length === 1 ? '' : 's'}</div><div class="cell-sub">Waiting for your first reply</div></div>${W.pill('Requests', 'cyan')}</a>`);
+      if (overdue.length) todo.push(html`<a class="list-item" href="#/admin/clients?billing=overdue"><div class="grow"><div class="cell-title">${overdue.length} overdue payment${overdue.length === 1 ? '' : 's'}</div><div class="cell-sub">${overdue.map(function (c) { return c.business_name; }).join(', ')}</div></div>${W.pill('Billing', 'red')}</a>`);
+      if (drafts.length) todo.push(html`<a class="list-item" href="#/admin/summaries?month=${drafts[0].month.slice(0, 7)}"><div class="grow"><div class="cell-title">${drafts.length} summar${drafts.length === 1 ? 'y' : 'ies'} waiting to go out</div><div class="cell-sub">${failedDrafts.length ? failedDrafts.length + ' could not be sent: ' + failedDrafts[0].last_error : 'Add a note or send early'}</div></div>${W.pill('Summaries', failedDrafts.length ? 'red' : 'amber')}</a>`);
+      if (waitingFiles.length) todo.push(html`<div class="list-item"><div class="grow"><div class="cell-title">Waiting on ${waitingFiles.length} file${waitingFiles.length === 1 ? '' : 's'} from clients</div><div class="cell-sub">${waitingFiles.slice(0, 3).map(function (f) { return (f.clients && f.clients.business_name) + ': ' + f.title; }).join(' · ')}</div></div>${W.pill('Files', 'muted')}</div>`);
       W.page(html`
         ${W.head('Hi ' + name, 'Here is how WAVE Digital is doing today.', html`<a class="btn primary" href="#/admin/clients?add=1">${W.icon('plus')}Add client</a>`)}
         <div class="tiles">
-          <div class="tile"><div class="label">Monthly recurring revenue</div><div class="value">${W.money(mrr)}</div><div class="sub">from ${active.length} active client${active.length === 1 ? '' : 's'}</div></div>
+          <div class="tile"><div class="label">Monthly recurring revenue</div><div class="value">${W.money(mrr)}</div><div class="sub">${W.money(mrr * 12)} a year · ${active.length} active client${active.length === 1 ? '' : 's'}</div></div>
           <a class="tile" href="#/admin/clients"><div class="label">Active clients</div><div class="value">${active.length}</div><div class="sub">${clients.length} in total</div></a>
           <a class="tile" href="#/admin/requests"><div class="label">Open requests</div><div class="value">${open.length}</div><div class="sub">${fresh.length} new, waiting on you</div></a>
           <a class="tile" href="#/admin/clients?billing=overdue"><div class="label">Overdue payments</div><div class="value${overdue.length ? ' delta-down' : ''}">${overdue.length}</div><div class="sub">${overdue.length ? W.money(overdue.reduce(function (s, c) { return s + Number(c.monthly_amount || 0); }, 0)) + ' a month at risk' : 'Everyone is paid up'}</div></a>
           <div class="tile"><div class="label">Requests done this month</div><div class="value">${doneThisMonth}</div><div class="sub">since ${W.date(monthStart)}</div></div>
         </div>
+        ${todo.length ? html`<div class="card"><div class="card-head"><h2>Needs your attention</h2></div><div class="list">${todo}</div></div>` : ''}
         <div class="split">
           <div class="card"><div class="card-head"><div><h2>Open requests</h2><p>Urgent first, then newest.</p></div><a class="btn small" href="#/admin/requests">All requests</a></div>
             ${W.requestTable(open.slice(0, 8), { admin: true, showClient: true, emptyTitle: 'Nothing open', emptyText: 'New client requests will show up here.' })}</div>
-          <div class="card"><div class="card-head"><h2>Recent activity</h2></div>
-            ${activity.length ? html`<div class="list">${activity.map(function (a) {
-              return html`<div class="list-item"><div class="grow"><div>${a.summary}</div>
-                <div class="cell-sub">${a.clients ? a.clients.business_name + ' · ' : ''}${W.ago(a.created_at)}</div></div></div>`;
-            })}</div>` : W.empty('No activity yet', 'Adding clients and handling requests will show up here.')}</div>
-        </div>`);
+          <div style="display:grid;gap:22px">
+            <div class="card"><div class="card-head"><h2>Coming up</h2></div>
+              ${meetings.length || dueSoon.length ? html`<div class="list">
+                ${meetings.map(function (m) { return html`<a class="list-item" href="#/admin/clients/${m.client_id}/meetings"><div style="color:var(--muted)">${W.icon('calendar')}</div><div class="grow"><div class="cell-title">${m.clients && m.clients.business_name}</div><div class="cell-sub">${m.topic || 'Meeting'} · ${W.dateTime(m.starts_at)}</div></div></a>`; })}
+                ${dueSoon.map(function (c) { return html`<a class="list-item" href="#/admin/clients/${c.id}/billing"><div style="color:var(--muted)">${W.icon('card')}</div><div class="grow"><div class="cell-title">${c.business_name}</div><div class="cell-sub">${W.money(c.monthly_amount)} due ${W.date(c.next_payment_date)}</div></div></a>`; })}
+              </div>` : html`<p class="muted">No meetings or payments in the next week.</p>`}</div>
+            <div class="card"><div class="card-head"><div><h2>Revenue by plan</h2><p>Monthly value of active clients</p></div></div>
+              ${W.rankedBars(planRows, { format: W.money, empty: 'Add plans to your clients to see this.' })}</div>
+          </div>
+        </div>
+        <div class="card"><div class="card-head"><h2>Recent activity</h2><a class="btn small" href="#/admin/activity">All activity</a></div>
+          ${activity.length ? html`<div class="list">${activity.map(function (a) {
+            return html`<div class="list-item"><div class="grow"><div>${a.summary}</div>
+              <div class="cell-sub">${a.clients ? a.clients.business_name + ' · ' : ''}${W.ago(a.created_at)}</div></div></div>`;
+          })}</div>` : W.empty('No activity yet', 'Adding clients and handling requests will show up here.')}</div>`);
       W.wireRowLinks(W.$('#main'));
       W.refreshBadges();
+    });
+  });
+
+  // ---------- activity log ----------
+  W.route('/admin/activity', 'admin', function (_, query) {
+    W.loading();
+    var limit = Math.min(1000, Number(query.limit) || 100);
+    var q = W.sb.from('activity_log').select('id, summary, created_at, client_id, clients(business_name), actor:profiles(full_name, email)')
+      .order('created_at', { ascending: false }).limit(limit + 1);
+    if (query.client) q = q.eq('client_id', query.client);
+    return Promise.all([W.q(q), W.q(W.sb.from('clients').select('id, business_name').order('business_name'))]).then(function (res) {
+      var rows = res[0], more = rows.length > limit;
+      rows = rows.slice(0, limit);
+      var el = W.page(html`
+        ${W.head('Activity', 'Everything that happened across your clients, newest first.')}
+        <div class="filters"><label class="field" style="min-width:240px"><span>Client</span><select data-client><option value="">All clients</option>${W.options(res[1].map(function (c) { return [c.id, c.business_name]; }), query.client || '')}</select></label></div>
+        <div class="card">${rows.length ? html`<div class="list">${rows.map(function (a) {
+          var who = a.actor ? (a.actor.full_name || a.actor.email) : 'System';
+          return html`<div class="list-item"><div class="grow"><div>${a.summary}</div>
+            <div class="cell-sub">${a.clients ? html`<a href="#/admin/clients/${a.client_id}">${a.clients.business_name}</a> · ` : ''}${who} · ${W.dateTime(a.created_at)}</div></div></div>`;
+        })}</div>` : W.empty('No activity yet', '')}
+        ${more ? html`<div style="margin-top:16px;text-align:center"><button type="button" class="btn small" data-more>Show more</button></div>` : ''}</div>`);
+      el.querySelector('[data-client]').addEventListener('change', function (e) { W.go('/admin/activity' + (e.target.value ? '?client=' + e.target.value : '')); });
+      var m = el.querySelector('[data-more]');
+      if (m) m.addEventListener('click', function () {
+        var qs = new URLSearchParams(); if (query.client) qs.set('client', query.client); qs.set('limit', String(limit + 100));
+        W.go('/admin/activity?' + qs);
+      });
     });
   });
 

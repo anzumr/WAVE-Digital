@@ -116,7 +116,7 @@
     if (!rows.length) return html`<p class="muted">${opts.empty || 'No data yet.'}</p>`;
     var max = Math.max.apply(null, rows.map(function (r) { return r.value; }).concat([1]));
     return html`<div class="bars">${rows.map(function (r) {
-      return html`<div class="bar-row"><span class="lbl" title="${r.label}">${r.label}</span><span class="n">${W.num(r.value)}</span>
+      return html`<div class="bar-row"><span class="lbl" title="${r.label}">${r.label}</span><span class="n">${(opts.format || W.num)(r.value)}</span>
         <span class="track"><span class="fill" style="width:${Math.max(1, (r.value / max) * 100).toFixed(1)}%"></span></span></div>`;
     })}</div>`;
   };

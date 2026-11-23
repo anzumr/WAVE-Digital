@@ -121,10 +121,61 @@ async function meetingBooked(db: Db, data: Record<string, string>) {
   });
 }
 
+async function fileAdded(db: Db, data: Record<string, string>) {
+  const { data: f } = await db.from("files")
+    .select("id, client_id, file_name, category, note, file_request_id, clients(business_name), profiles(full_name, email), file_requests(title)")
+    .eq("id", data.file_id).single();
+  if (!f) return { skipped: "file not found" };
+  // deno-lint-ignore no-explicit-any
+  const ff = f as any;
+  const business = ff.clients?.business_name ?? "A client";
+  if (f.category === "deliverable") {
+    const link = `${PORTAL_URL}#/files`;
+    const paragraphs = [`WAVE shared a new file with you: <strong>${esc(f.file_name)}</strong>.`];
+    if (f.note) paragraphs.push(esc(f.note));
+    return await sendEmail({
+      to: await memberEmails(db, f.client_id),
+      subject: `New file from WAVE: ${f.file_name}`,
+      html: renderEmail({ heading: "A new file is ready for you", paragraphs, button: { label: "Open your files", url: link } }),
+      text: plainText("A new file is ready for you", [`WAVE shared a new file with you: ${f.file_name}.`, ...(f.note ? [f.note] : [])], link),
+    });
+  }
+  const who = ff.profiles?.full_name || ff.profiles?.email || "The client";
+  const asked = ff.file_requests?.title ? ` (for “${ff.file_requests.title}”)` : "";
+  const link = `${PORTAL_URL}#/admin/clients/${f.client_id}/files`;
+  return await sendEmail({
+    to: await adminEmails(db),
+    subject: `${business} uploaded ${f.file_name}`,
+    html: renderEmail({
+      heading: `${business} uploaded a file`,
+      paragraphs: [`<strong>${esc(who)}</strong> uploaded <strong>${esc(f.file_name)}</strong>${esc(asked)}.`],
+      button: { label: "Open their files", url: link },
+    }),
+    text: plainText(`${business} uploaded a file`, [`${who} uploaded ${f.file_name}${asked}.`], link),
+  });
+}
+
+async function fileRequested(db: Db, data: Record<string, string>) {
+  const { data: r } = await db.from("file_requests").select("id, client_id, title, description").eq("id", data.file_request_id).single();
+  if (!r) return { skipped: "file request not found" };
+  const link = `${PORTAL_URL}#/files`;
+  const paragraphs = [`WAVE needs a file from you: <strong>${esc(r.title)}</strong>.`];
+  if (r.description) paragraphs.push(para(r.description));
+  paragraphs.push("You can upload it from the Files page in your portal.");
+  return await sendEmail({
+    to: await memberEmails(db, r.client_id),
+    subject: `WAVE needs a file from you: ${r.title}`,
+    html: renderEmail({ heading: "WAVE needs a file from you", paragraphs, button: { label: "Upload it", url: link } }),
+    text: plainText("WAVE needs a file from you", [r.title, ...(r.description ? ["", r.description] : []), "", "Upload it from the Files page in your portal."], link),
+  });
+}
+
 const HANDLERS: Record<string, (db: Db, data: Record<string, string>) => Promise<unknown>> = {
   request_created: requestCreated,
   request_update: requestUpdate,
   meeting_booked: meetingBooked,
+  file_added: fileAdded,
+  file_requested: fileRequested,
 };
 
 serve(async (req) => {

@@ -321,6 +321,7 @@
         ['/admin/requests', 'Requests', 'inbox'],
         ['/admin/stats', 'Monthly stats', 'chart'],
         ['/admin/summaries', 'Summaries', 'doc'],
+        ['/admin/activity', 'Activity', 'clock'],
         ['/admin/settings', 'Settings', 'gear']
       ];
     }
