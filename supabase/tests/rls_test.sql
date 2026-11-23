@@ -11,7 +11,7 @@ declare
   cb uuid := '00000000-0000-4000-8000-0000000000c2';
   ra uuid := '00000000-0000-4000-8000-0000000000d1';
   rb uuid := '00000000-0000-4000-8000-0000000000d2';
-  n int; s text; j jsonb; new_id uuid;
+  n int; s text; j jsonb; new_id uuid; frb uuid;
 begin
   create temp table results (test text, ok boolean, detail text) on commit drop;
   grant insert, select on results to authenticated, anon;
@@ -255,6 +255,58 @@ begin
   update public.clients set billing_status = 'overdue' where id = ca;
   select count(*) into n from public.activity_log where client_id = ca and action = 'billing_status';
   insert into results values ('Billing status change is logged', n = 1, 'saw ' || n);
+  reset role;
+
+  -- ---------- phases 5-6: file requests, files, connections ----------
+  perform set_config('request.jwt.claims', json_build_object('sub', admin_id, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  set local role authenticated;
+  insert into public.file_requests (client_id, title) values (ca, 'Logo PNG') returning id into new_id;
+  insert into public.integrations (client_id, provider, external_id) values (ca, 'instagram', '17841400000000000'), (cb, 'facebook', '1000000000');
+  insert into results values ('Admin can ask for files and connect accounts', true, null);
+  reset role;
+  insert into public.file_requests (client_id, title) values (cb, 'B menu') returning id into frb;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.file_requests;
+  insert into results values ('A sees only own file requests', n = 1, 'saw ' || n);
+  begin
+    insert into public.file_requests (client_id, title) values (ca, 'self-made');
+    insert into results values ('A cannot create file requests', false, 'succeeded');
+  exception when others then insert into results values ('A cannot create file requests', true, sqlerrm); end;
+  update public.file_requests set status = 'cancelled' where id = new_id;
+  get diagnostics n = row_count;
+  insert into results values ('A cannot change file requests directly', n = 0, 'updated ' || n);
+  insert into public.files (client_id, bucket_path, file_name, category, file_request_id) values (ca, ca || '/upload/logo.png', 'logo.png', 'upload', new_id);
+  select status into s from public.file_requests where id = new_id;
+  insert into results values ('Uploading for a file request ticks it off', s = 'received', s);
+  begin
+    insert into public.files (client_id, bucket_path, file_name, category, file_request_id)
+      values (ca, ca || '/upload/x.png', 'x.png', 'upload', frb);
+    insert into results values ('A cannot answer B''s file request', false, 'succeeded');
+  exception when others then insert into results values ('A cannot answer B''s file request', true, sqlerrm); end;
+  begin
+    insert into public.files (client_id, bucket_path, file_name, category) values (ca, ca || '/deliverable/y.png', 'y.png', 'upload');
+    insert into results values ('Upload row cannot point into deliverables folder', false, 'succeeded');
+  exception when others then insert into results values ('Upload row cannot point into deliverables folder', true, sqlerrm); end;
+  update public.files set note = 'hacked' where client_id = ca;
+  get diagnostics n = row_count;
+  insert into results values ('A cannot edit file notes', n = 0, 'updated ' || n);
+  select count(*) into n from public.integrations;
+  insert into results values ('A cannot see connections', n = 0, 'saw ' || n);
+  begin
+    insert into public.integrations (client_id, provider, external_id) values (ca, 'google_ads', '1234567890');
+    insert into results values ('A cannot add connections', false, 'succeeded');
+  exception when others then insert into results values ('A cannot add connections', true, sqlerrm); end;
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', ub, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.files where client_id = ca;
+  insert into results values ('B cannot see A''s files', n = 0, 'saw ' || n);
+  delete from public.files where client_id = ca;
+  get diagnostics n = row_count;
+  insert into results values ('B cannot delete A''s files', n = 0, 'deleted ' || n);
   reset role;
 
   -- ---------- signed-out visitors ----------

@@ -205,7 +205,7 @@ dialog.modal::backdrop{background:rgba(1,6,12,.72)}
 .bar-row{display:grid;grid-template-columns:minmax(0,1fr) 56px;gap:4px 12px;font-size:14px}
 .bar-row .track{display:block;grid-column:1/-1;height:6px;border-radius:3px;background:var(--bg-2);overflow:hidden}
 .bar-row .fill{display:block;height:100%;background:var(--blue);border-radius:0 3px 3px 0}
-.bar-row .n{text-align:right;color:var(--text-2);font-variant-numeric:tabular-nums}
+.bar-row .n{text-align:right;color:var(--text-2)}
 .bar-row .lbl{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ---------- responsive ---------- */

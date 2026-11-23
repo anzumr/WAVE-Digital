@@ -1,6 +1,6 @@
 # WAVE Portal: design plan
 
-Status: draft for review, nothing built yet
+Status: built and tested (all six phases). Setup steps: docs/PORTAL-SETUP.md
 Address: `wavedigital.biz/me`
 
 ## 1. What it is

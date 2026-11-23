@@ -220,6 +220,8 @@
           var n = Number(raw);
           if (isNaN(n) || n < 0) throw new Error(m.group + ' ' + m.label.toLowerCase() + ' must be a positive number.');
           if (m.kind === 'rating' && n > 5) throw new Error('A Google rating is between 0 and 5.');
+          // An unchanged synced number stays "auto" so the next sync can keep it up to date.
+          if (auto(m.key) && Number(v(m.key)) === n) return;
           upserts.push({ client_id: clientId, month: month, metric: m.key, value: n, source: 'manual' });
         });
         return Promise.resolve()
