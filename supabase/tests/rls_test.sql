@@ -186,6 +186,77 @@ begin
   exception when others then insert into results values ('A cannot add to a closed request', true, sqlerrm); end;
   reset role;
 
+  -- ---------- phases 3-4: meetings, stats, summaries ----------
+  insert into public.meetings (client_id, topic, starts_at) values (ca, 'A call', now() + interval '1 day'), (cb, 'B call', now() + interval '1 day');
+  insert into public.site_stats_daily (client_id, day, visits, pageviews) values (ca, current_date, 10, 20), (cb, current_date, 5, 9);
+  insert into public.site_stats_dims (client_id, day, dim, label, pageviews, visits) values (ca, current_date, 'page', '/', 20, 10), (cb, current_date, 'page', '/', 9, 5);
+  insert into public.monthly_metrics (client_id, month, metric, value) values (ca, date_trunc('month', current_date)::date, 'ads.leads', 7), (cb, date_trunc('month', current_date)::date, 'ads.leads', 3);
+  insert into public.monthly_summaries (client_id, month, status, pdf_path) values
+    (ca, date_trunc('month', current_date - interval '1 month')::date, 'sent', ca || '/summaries/sent.pdf'),
+    (ca, date_trunc('month', current_date)::date, 'draft', ca || '/summaries/draft.pdf'),
+    (cb, date_trunc('month', current_date - interval '1 month')::date, 'sent', cb || '/summaries/sent.pdf');
+  insert into storage.objects (bucket_id, name) values
+    ('client-files', ca || '/summaries/sent.pdf'), ('client-files', ca || '/summaries/draft.pdf'),
+    ('client-files', ca || '/deliverable/logo.pdf'), ('client-files', cb || '/upload/b.png');
+
+  perform set_config('request.jwt.claims', json_build_object('sub', ua, 'role', 'authenticated', 'aal', 'aal1')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.meetings;
+  insert into results values ('A sees only own meetings', n = 1, 'saw ' || n);
+  begin
+    insert into public.meetings (client_id, topic) values (ca, 'self-booked');
+    insert into results values ('A cannot write meetings directly', false, 'succeeded');
+  exception when others then insert into results values ('A cannot write meetings directly', true, sqlerrm); end;
+  select count(*) into n from public.site_stats_daily;
+  insert into results values ('A sees only own site stats', n = 1, 'saw ' || n);
+  select count(*) into n from public.site_stats_dims;
+  insert into results values ('A sees only own page stats', n = 1, 'saw ' || n);
+  select count(*) into n from public.monthly_metrics;
+  insert into results values ('A sees only own monthly numbers', n = 1, 'saw ' || n);
+  update public.monthly_metrics set value = 999 where client_id = ca;
+  get diagnostics n = row_count;
+  insert into results values ('A cannot change monthly numbers', n = 0, 'updated ' || n);
+  begin
+    insert into public.site_stats_daily (client_id, day, visits) values (ca, current_date - 1, 1000);
+    insert into results values ('A cannot write site stats', false, 'succeeded');
+  exception when others then insert into results values ('A cannot write site stats', true, sqlerrm); end;
+  select count(*) into n from public.monthly_summaries;
+  insert into results values ('A sees only own SENT summaries', n = 1, 'saw ' || n);
+  select count(*) into n from storage.objects where bucket_id = 'client-files';
+  insert into results values ('A storage: sees own sent summary + deliverable only', n = 2, 'saw ' || n);
+  select count(*) into n from storage.objects where name = ca || '/summaries/draft.pdf';
+  insert into results values ('A cannot open draft summary PDF', n = 0, 'saw ' || n);
+  select count(*) into n from storage.objects where name like cb || '/%';
+  insert into results values ('A cannot see B files in storage', n = 0, 'saw ' || n);
+  begin
+    insert into storage.objects (bucket_id, name, owner_id) values ('client-files', ca || '/deliverable/fake.pdf', ua::text);
+    insert into results values ('A cannot upload into deliverables folder', false, 'succeeded');
+  exception when others then insert into results values ('A cannot upload into deliverables folder', true, sqlerrm); end;
+  begin
+    insert into storage.objects (bucket_id, name, owner_id) values ('client-files', cb || '/upload/x.png', ua::text);
+    insert into results values ('A cannot upload into B folder', false, 'succeeded');
+  exception when others then insert into results values ('A cannot upload into B folder', true, sqlerrm); end;
+  insert into storage.objects (bucket_id, name, owner_id) values ('client-files', ca || '/upload/mine.png', ua::text);
+  insert into results values ('A can upload into own uploads folder', true, null);
+  reset role;
+
+  perform set_config('request.jwt.claims', json_build_object('sub', admin_id, 'role', 'authenticated', 'aal', 'aal2')::text, true);
+  set local role authenticated;
+  select count(*) into n from public.monthly_summaries where client_id in (ca, cb);
+  insert into results values ('Admin sees all summaries incl. drafts', n = 3, 'saw ' || n);
+  insert into public.monthly_metrics (client_id, month, metric, value) values (ca, date_trunc('month', current_date)::date, 'reviews.google.rating', 4.7);
+  insert into results values ('Admin can enter monthly numbers', true, null);
+  begin
+    insert into public.monthly_metrics (client_id, month, metric, value) values (ca, current_date, 'bad metric!', 1);
+    insert into results values ('Bad metric key rejected', current_date = date_trunc('month', current_date)::date and false, 'succeeded');
+  exception when others then insert into results values ('Bad metric key rejected', true, sqlerrm); end;
+  insert into public.meetings (client_id, topic) values (cb, 'Logged by WAVE');
+  insert into results values ('Admin can log meetings', true, null);
+  update public.clients set billing_status = 'overdue' where id = ca;
+  select count(*) into n from public.activity_log where client_id = ca and action = 'billing_status';
+  insert into results values ('Billing status change is logged', n = 1, 'saw ' || n);
+  reset role;
+
   -- ---------- signed-out visitors ----------
   set local role anon;
   begin

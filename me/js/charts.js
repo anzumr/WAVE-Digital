@@ -45,7 +45,8 @@
       var every = Math.max(1, Math.ceil(points.length / Math.max(2, Math.floor(iw / 80))));
       points.forEach(function (p, i) {
         if (i % every && i !== points.length - 1) return;
-        if (i !== points.length - 1 && points.length - 1 - i < every / 2) return;
+        // keep a regular tick only if it sits clear of the last label
+        if (i !== points.length - 1 && x(points.length - 1) - x(i) < 64) return;
         var t = svgEl('text', { x: x(i), y: height - 6, 'text-anchor': i === 0 ? 'start' : (i === points.length - 1 ? 'end' : 'middle') });
         t.textContent = W.date(p.x).replace(/, \d{4}$/, '');
         svg.appendChild(t);
